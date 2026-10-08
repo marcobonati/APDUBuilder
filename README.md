@@ -1,6 +1,12 @@
 # emv-apdu-builder
 
-An Electron application with React and TypeScript
+Tool desktop (Electron + React + TypeScript) per comporre APDU response EMV in modo guidato.
+
+- Scegli un template (SELECT PPSE/PSE/AID, GPO formato 1/2, qVSDC, READ RECORD, GENERATE AC, INTERNAL AUTHENTICATE, GET DATA, GET CHALLENGE…) oppure importa una response esistente da hex.
+- Compila i tag con editor specifici per formato: testo, numerico, date, bitfield (AIP, AUC, CTQ, IAC, CID), DOL, AFL, CVM List, Track 2.
+- Lunghezze e template annidati vengono calcolati automaticamente; il pannello a destra mostra i byte RAW colorati, la Status Word, la verifica e la struttura TLV.
+
+Il core EMV (TLV, dizionario tag, template, validazione) si trova in `src/renderer/src/emv/`.
 
 ## Recommended IDE Setup
 
