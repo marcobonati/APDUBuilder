@@ -6,6 +6,7 @@ Tool desktop (Electron + React + TypeScript) per comporre APDU response EMV in m
 - Compila i tag con editor specifici per formato: testo, numerico, date, bitfield (AIP, AUC, CTQ, IAC, CID), DOL, AFL, CVM List, Track 2.
 - Lunghezze e template annidati vengono calcolati automaticamente; il pannello a destra mostra i byte RAW colorati, la Status Word, la verifica e la struttura TLV.
 
+- **Menu File** (nativo e nell'app): nuovo, apri, **apri recenti** (ultimi 10 file, anche ⌥⌘1…9), salva, salva come, importa da hex, esporta documentazione.
 - Organizza più response in un **progetto** (es. tutte le risposte di un profilo carta) e salvalo/aprilo come file `.emvproj` (JSON leggibile) con ⌘S / ⇧⌘S / ⌘O / ⌘N. La sessione corrente viene comunque conservata automaticamente tra un avvio e l'altro.
 
 - **Guida in linea** contestuale (F1 o pulsante «Guida»): pannello a destra che documenta il tag sotto il puntatore — utilizzo, ruolo nel flusso di pagamento EMV, valore corrente decodificato, formato, contesto e riferimenti alle specifiche. Si può bloccare su un tag con il lucchetto.

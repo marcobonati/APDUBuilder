@@ -16,13 +16,15 @@ interface Props {
   issues: Issue[]
 }
 
-type CopyFormat = 'hex' | 'spaced' | 'c' | 'java' | 'python'
+type CopyFormat = 'hex' | 'spaced' | 'c' | 'java' | 'kotlin' | 'swift' | 'python'
 
 const FORMATS: { id: CopyFormat; label: string }[] = [
   { id: 'hex', label: 'Hex' },
   { id: 'spaced', label: 'Hex spaziato' },
   { id: 'c', label: 'C array' },
   { id: 'java', label: 'Java' },
+  { id: 'kotlin', label: 'Kotlin' },
+  { id: 'swift', label: 'Swift' },
   { id: 'python', label: 'Python' }
 ]
 
@@ -45,6 +47,14 @@ function formatAs(hex: string, f: CopyFormat): string {
         bytes.map((b) => `(byte) 0x${b}`),
         8
       )}\n};`
+    case 'kotlin':
+      // Kotlin Byte is signed: values above 0x7F need an explicit conversion.
+      return `val response = byteArrayOf(\n${lines(
+        bytes.map((b) => (parseInt(b, 16) > 0x7f ? `0x${b}.toByte()` : `0x${b}`)),
+        8
+      )}\n)`
+    case 'swift':
+      return `let response: [UInt8] = [\n${lines(bytes.map((b) => `0x${b}`))}\n]`
     case 'python':
       return `response = bytes.fromhex("${hex}")`
   }
@@ -220,7 +230,9 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
             {copied === 'raw' ? `✓ ${t('Copiato')}` : t('Copia')}
           </button>
         </div>
-        <pre className="raw-text">{formatAs(fullHex, format)}</pre>
+        <pre className={`raw-text ${format === 'hex' || format === 'spaced' ? '' : 'code'}`}>
+          {formatAs(fullHex, format)}
+        </pre>
       </section>
 
       <section className="panel-section">

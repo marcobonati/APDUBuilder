@@ -22,6 +22,36 @@ export interface Api {
     suggestedName: string
     title: string
   }) => Promise<string | null>
+  /** Reads a project from a known path (recent files); rejects if the file is missing. */
+  openProjectPath: (path: string) => Promise<{ path: string; content: string }>
+  /** Most recently used project files, newest first. */
+  recentFiles: () => Promise<RecentFile[]>
+  clearRecent: () => Promise<void>
+  /** Subscribes to changes of the recent list; returns the unsubscribe function. */
+  onRecentChanged: (cb: (files: RecentFile[]) => void) => () => void
+  /** Commands chosen in the native application menu. */
+  onMenuCommand: (cb: (cmd: MenuCommandEvent) => void) => () => void
+}
+
+export interface RecentFile {
+  path: string
+  /** "file.emvproj — ~/folder" */
+  label: string
+}
+
+export interface MenuCommandEvent {
+  cmd:
+    | 'new'
+    | 'open'
+    | 'openRecent'
+    | 'save'
+    | 'saveAs'
+    | 'importHex'
+    | 'exportDoc'
+    | 'toggleHelp'
+    | 'undo'
+    | 'redo'
+  path?: string
 }
 
 declare global {

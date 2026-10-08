@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
+import FileMenu from './FileMenu'
 import TemplatePicker from './TemplatePicker'
+import type { MenuCommandEvent, RecentFile } from '../../../preload/index.d'
 import { LANGS, t } from '../i18n'
 import type { Lang } from '../i18n'
 import { useEditor } from '../state/context'
@@ -13,13 +15,10 @@ interface Props {
   filePath: string | null
   dirty: boolean
   onSelectTemplate: (t: ResponseTemplate) => void
-  onImport: () => void
-  onNew: () => void
-  onOpen: () => void
-  onSave: () => void
-  onSaveAs: () => void
   onLang: (lang: Lang) => void
-  onExportDoc: () => void
+  /** File menu commands (same as the native application menu). */
+  onCommand: (cmd: MenuCommandEvent['cmd'], path?: string) => void
+  recent: RecentFile[]
 }
 
 function ResponseItem({
@@ -121,6 +120,7 @@ export default function Sidebar(props: Props): React.JSX.Element {
     <nav className="sidebar">
       <div className="project">
         <div className="brand-row">
+          <FileMenu recent={props.recent} onCommand={props.onCommand} />
           <span className="brand-title">EMV APDU Builder</span>
           <span className="lang-switch" role="group" aria-label={t('Lingua')}>
             {LANGS.map((l) => (
@@ -145,31 +145,6 @@ export default function Sidebar(props: Props): React.JSX.Element {
           {dirty && <span className="dirty-dot" title={t('Modifiche non salvate')} />}
           {filePath ? `${baseName(filePath)}.emvproj` : t('Non ancora salvato')}
           {dirty && <span className="muted"> · {t('modificato')}</span>}
-        </div>
-        <div className="project-actions">
-          <button className="btn small" onClick={props.onNew} title={`${t('Nuovo progetto')} (⌘N)`}>
-            {t('Nuovo')}
-          </button>
-          <button className="btn small" onClick={props.onOpen} title={`${t('Apri progetto')} (⌘O)`}>
-            {t('Apri…')}
-          </button>
-          <button
-            className={`btn small ${dirty ? 'primary' : ''}`}
-            onClick={props.onSave}
-            title={`${t('Salva')} (⌘S)`}
-          >
-            {t('Salva')}
-          </button>
-          <button className="btn small" onClick={props.onSaveAs} title={`${t('Salva come')} (⇧⌘S)`}>
-            {t('Salva come…')}
-          </button>
-          <button
-            className="btn small"
-            onClick={props.onExportDoc}
-            title={`${t('Esporta documentazione')} (⌘E)`}
-          >
-            {t('Documentazione…')}
-          </button>
         </div>
       </div>
 
@@ -211,12 +186,6 @@ export default function Sidebar(props: Props): React.JSX.Element {
             </div>
           )}
         </section>
-      </div>
-
-      <div className="sidebar-foot">
-        <button className="btn wide" onClick={props.onImport}>
-          ⤓ {t('Importa response da hex')}
-        </button>
       </div>
     </nav>
   )

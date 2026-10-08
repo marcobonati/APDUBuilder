@@ -16,7 +16,7 @@ import type { Lang } from './i18n'
 import { EditorContext } from './state/context'
 import type { EditorCtx, HelpTarget } from './state/context'
 import { baseName, parseProject, serializeProject } from './state/projectFile'
-import { notifyDirty, openProjectFile, saveProjectFile } from './state/projectIO'
+import { notifyDirty, openProjectFile, openProjectPath, saveProjectFile } from './state/projectIO'
 import {
   activeResponse,
   isDirty,
@@ -26,6 +26,7 @@ import {
   saveSession
 } from './state/store'
 import type { Doc, State } from './state/store'
+import type { MenuCommandEvent, RecentFile } from '../../preload/index.d'
 
 function docFromTemplate(tpl: ResponseTemplate): Doc {
   return { templateId: tpl.id, nodes: buildNodes(tpl.root), sw: tpl.sw ?? '9000' }
@@ -59,6 +60,8 @@ function initialHelpOpen(): boolean {
     return true
   }
 }
+
+type Command = MenuCommandEvent['cmd']
 
 interface Toast {
   text: string
@@ -181,73 +184,113 @@ function App(): React.JSX.Element {
     [state.project, state.filePath, showToast]
   )
 
-  const open = useCallback(async (): Promise<void> => {
-    if (!confirmDiscard()) return
-    try {
-      const file = await openProjectFile()
-      if (!file) return
-      const project = parseProject(file.content)
-      dispatch({ type: 'openProject', project, filePath: file.path })
-      showToast(
-        t('Aperto "{name}" ({n} response)', { name: project.name, n: project.responses.length })
-      )
-    } catch (e) {
-      showToast(`${t('Impossibile aprire il progetto')}: ${(e as Error).message}`, 'error')
-    }
-  }, [confirmDiscard, showToast])
+  const openFile = useCallback(
+    async (path?: string): Promise<void> => {
+      if (!confirmDiscard()) return
+      try {
+        const file = path ? await openProjectPath(path) : await openProjectFile()
+        if (!file) return
+        const project = parseProject(file.content)
+        dispatch({ type: 'openProject', project, filePath: file.path })
+        showToast(
+          t('Aperto "{name}" ({n} response)', { name: project.name, n: project.responses.length })
+        )
+      } catch (e) {
+        showToast(`${t('Impossibile aprire il progetto')}: ${(e as Error).message}`, 'error')
+      }
+    },
+    [confirmDiscard, showToast]
+  )
 
   const createNew = useCallback((): void => {
     if (!confirmDiscard()) return
     dispatch({ type: 'openProject', project: freshProject(), filePath: null })
   }, [confirmDiscard])
 
-  // Latest commands for the global key handler, registered once.
-  const exportDoc = useCallback(() => setExporting(true), [])
-  const commands = useRef({ save, open, createNew, exportDoc, toggleHelp })
+  /** Inside a text field undo/redo act on the field, elsewhere on the project history. */
+  const undoRedo = useCallback((redo: boolean): void => {
+    const el = document.activeElement as HTMLElement | null
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      document.execCommand(redo ? 'redo' : 'undo')
+    } else {
+      dispatch({ type: redo ? 'redo' : 'undo' })
+    }
+  }, [])
+
+  const runCommand = useCallback(
+    (cmd: Command, path?: string): void => {
+      switch (cmd) {
+        case 'new':
+          return createNew()
+        case 'open':
+          void openFile()
+          return
+        case 'openRecent':
+          if (path) void openFile(path)
+          return
+        case 'save':
+        case 'saveAs':
+          void save(cmd === 'saveAs')
+          return
+        case 'importHex':
+          return setImporting(true)
+        case 'exportDoc':
+          return setExporting(true)
+        case 'toggleHelp':
+          return toggleHelp()
+        case 'undo':
+        case 'redo':
+          return undoRedo(cmd === 'redo')
+      }
+    },
+    [createNew, openFile, save, toggleHelp, undoRedo]
+  )
+
+  // Native menu, in-app menu and shortcuts all go through fire(). On Windows/Linux a
+  // shortcut can reach both the page and the menu accelerator: the same command
+  // repeated within a few milliseconds is ignored.
+  const commandRef = useRef(runCommand)
+  const lastFired = useRef({ key: '', time: 0 })
   useEffect(() => {
-    commands.current = { save, open, createNew, exportDoc, toggleHelp }
-  }, [save, open, createNew, exportDoc, toggleHelp])
+    commandRef.current = runCommand
+  }, [runCommand])
+  const fire = useCallback((cmd: Command, path?: string): void => {
+    const key = `${cmd}:${path ?? ''}`
+    const now = performance.now()
+    if (lastFired.current.key === key && now - lastFired.current.time < 250) return
+    lastFired.current = { key, time: now }
+    commandRef.current(cmd, path)
+  }, [])
+
+  useEffect(() => window.api?.onMenuCommand((e) => fire(e.cmd, e.path)), [fire])
+
+  const [recent, setRecent] = useState<RecentFile[]>([])
+  useEffect(() => {
+    if (!window.api) return
+    window.api.recentFiles().then(setRecent, () => setRecent([]))
+    return window.api.onRecentChanged(setRecent)
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const mod = e.metaKey || e.ctrlKey
-      if (e.key === 'F1' || (mod && e.key === '/')) {
-        e.preventDefault()
-        commands.current.toggleHelp()
-        return
-      }
-      if (!mod) return
       const key = e.key.toLowerCase()
-      if (key === 's') {
-        e.preventDefault()
-        commands.current.save(e.shiftKey)
-        return
-      }
-      if (key === 'o') {
-        e.preventDefault()
-        commands.current.open()
-        return
-      }
-      if (key === 'e') {
-        e.preventDefault()
-        commands.current.exportDoc()
-        return
-      }
-      if (key === 'n') {
-        e.preventDefault()
-        commands.current.createNew()
-        return
-      }
-      const target = e.target as HTMLElement
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
-      if (key === 'z') {
-        e.preventDefault()
-        dispatch({ type: e.shiftKey ? 'redo' : 'undo' })
-      }
+      let cmd: Command | null = null
+      if (e.key === 'F1' || (mod && e.key === '/')) cmd = 'toggleHelp'
+      else if (mod && key === 's') cmd = e.shiftKey ? 'saveAs' : 'save'
+      else if (mod && key === 'o') cmd = 'open'
+      else if (mod && key === 'n') cmd = 'new'
+      else if (mod && key === 'e') cmd = 'exportDoc'
+      else if (mod && key === 'i') cmd = 'importHex'
+      else if (mod && key === 'z') cmd = e.shiftKey ? 'redo' : 'undo'
+      else if (mod && key === 'y') cmd = 'redo'
+      if (!cmd) return
+      e.preventDefault()
+      fire(cmd)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [fire])
 
   const reveal = useCallback((id: string) => {
     dispatch({ type: 'reveal', id })
@@ -284,12 +327,8 @@ function App(): React.JSX.Element {
           onSelectTemplate={(tpl) =>
             dispatch({ type: 'load', doc: docFromTemplate(tpl), name: t(tpl.name) })
           }
-          onImport={() => setImporting(true)}
-          onNew={createNew}
-          onOpen={open}
-          onSave={() => save(false)}
-          onSaveAs={() => save(true)}
-          onExportDoc={exportDoc}
+          onCommand={fire}
+          recent={recent}
           onLang={(l) => {
             setLang(l)
             setLangState(l)
