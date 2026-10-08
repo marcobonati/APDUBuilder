@@ -184,19 +184,38 @@ export function encodeTrack2(tk: Track2): string {
   return s.length % 2 ? s + 'F' : s
 }
 
-/** Luhn check on a digit string. */
+export interface LuhnStep {
+  digit: number
+  /** Every second digit from the right (check digit excluded) is doubled. */
+  doubled: boolean
+  /** Contribution to the sum: the digit, or the doubled digit minus 9 when above 9. */
+  value: number
+}
+
+export interface LuhnResult {
+  steps: LuhnStep[]
+  sum: number
+  valid: boolean
+  /** Check digit that would make the PAN valid. */
+  expectedCheckDigit: number
+}
+
+/** Luhn / mod 10 algorithm (ISO/IEC 7812-1) on a digit string, with intermediate steps. */
+export function luhn(pan: string): LuhnResult {
+  const steps = Array.from(pan).map((c, i) => {
+    const digit = parseInt(c, 10)
+    const doubled = (pan.length - 1 - i) % 2 === 1
+    const value = doubled ? (digit * 2 > 9 ? digit * 2 - 9 : digit * 2) : digit
+    return { digit, doubled, value }
+  })
+  const sum = steps.reduce((n, s) => n + s.value, 0)
+  const withoutCheck = sum - (steps[steps.length - 1]?.value ?? 0)
+  return { steps, sum, valid: sum % 10 === 0, expectedCheckDigit: (10 - (withoutCheck % 10)) % 10 }
+}
+
+/** Luhn check on a PAN (8 to 19 digits). */
 export function luhnValid(pan: string): boolean {
-  if (!/^\d{8,19}$/.test(pan)) return false
-  let sum = 0
-  for (let i = 0; i < pan.length; i++) {
-    let d = parseInt(pan[pan.length - 1 - i], 10)
-    if (i % 2 === 1) {
-      d *= 2
-      if (d > 9) d -= 9
-    }
-    sum += d
-  }
-  return sum % 10 === 0
+  return /^\d{8,19}$/.test(pan) && luhn(pan).valid
 }
 
 // ---------------- BIC ----------------

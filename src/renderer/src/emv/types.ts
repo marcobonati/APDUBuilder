@@ -64,5 +64,9 @@ export interface TlvNode {
   example?: string
   /** Hex length forced by the user (negative testing). Null = automatic. */
   lengthOverride?: string | null
+  /** User note in Markdown, included in the exported documentation. */
+  note?: string
+  /** Ids of the project labels applied to the node. */
+  labels?: string[]
   collapsed?: boolean
 }

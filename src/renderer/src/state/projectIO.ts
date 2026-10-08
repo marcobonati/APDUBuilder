@@ -20,6 +20,21 @@ export async function openProjectFile(): Promise<{ path: string | null; content:
   })
 }
 
+/** Opens a project from a known path (recent files). Electron only. */
+export async function openProjectPath(path: string): Promise<{ path: string; content: string }> {
+  if (!window.api) throw new Error('Not available outside the desktop app')
+  try {
+    return await window.api.openProjectPath(path)
+  } catch (e) {
+    // Electron wraps errors thrown in the main process: keep only the message.
+    const msg = (e as Error).message.replace(
+      /^Error invoking remote method '[^']+': (Error: )?/,
+      ''
+    )
+    throw new Error(msg)
+  }
+}
+
 /** Returns the path written, '' when downloaded in a browser, null when cancelled. */
 export async function saveProjectFile(
   content: string,

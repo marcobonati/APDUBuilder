@@ -1,6 +1,7 @@
 import { newId } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
-import type { Project, ResponseDoc } from './store'
+import { LABEL_COLORS } from './store'
+import type { LabelDef, Project, ResponseDoc } from './store'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'emv-apdu-builder-project'
@@ -19,6 +20,9 @@ interface FileNode {
   hint?: string
   example?: string
   lengthOverride?: string | null
+  note?: string
+  /** Label ids, see ProjectFile.labels. */
+  labels?: string[]
 }
 
 interface FileResponse {
@@ -34,6 +38,7 @@ interface ProjectFile {
   name: string
   savedAt: string
   activeIndex: number
+  labels?: LabelDef[]
   responses: FileResponse[]
 }
 
@@ -49,6 +54,8 @@ function toFileNode(n: TlvNode): FileNode {
   if (n.hint) out.hint = n.hint
   if (n.example) out.example = n.example
   if (n.lengthOverride) out.lengthOverride = n.lengthOverride
+  if (n.note?.trim()) out.note = n.note
+  if (n.labels?.length) out.labels = n.labels
   return out
 }
 
@@ -63,6 +70,7 @@ export function serializeProject(p: Project): string {
       0,
       p.responses.findIndex((r) => r.id === p.activeId)
     ),
+    labels: p.labels.length ? p.labels : undefined,
     responses: p.responses.map((r) => ({
       name: r.name,
       templateId: r.templateId,
@@ -77,14 +85,17 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const str = (v: unknown, def = ''): string => (typeof v === 'string' ? v : def)
 const hex = (v: unknown): string => str(v).replace(/\s+/g, '').toUpperCase()
 
-function fromFileNode(v: unknown, path: string): TlvNode {
+function fromFileNode(v: unknown, path: string, labelIds: Set<string>): TlvNode {
   if (!isObj(v)) throw new Error(`${path}: ${t('nodo non valido')}`)
   if (v.children !== undefined && !Array.isArray(v.children)) {
     throw new Error(`${path}: ${t('"children" deve essere una lista')}`)
   }
   const children = ((v.children as unknown[]) ?? []).map((c, i) =>
-    fromFileNode(c, `${path}.${i + 1}`)
+    fromFileNode(c, `${path}.${i + 1}`, labelIds)
   )
+  const labels = Array.isArray(v.labels)
+    ? v.labels.filter((l): l is string => typeof l === 'string' && labelIds.has(l))
+    : []
   return {
     id: newId(),
     tag: v.raw ? '' : hex(v.tag),
@@ -98,6 +109,8 @@ function fromFileNode(v: unknown, path: string): TlvNode {
     hint: str(v.hint) || undefined,
     example: hex(v.example) || undefined,
     lengthOverride: hex(v.lengthOverride) || null,
+    note: str(v.note) || undefined,
+    labels: labels.length ? labels : undefined,
     collapsed: false
   }
 }
@@ -118,6 +131,17 @@ export function parseProject(text: string): Project {
   if (!Array.isArray(data.responses) || data.responses.length === 0) {
     throw new Error(t('Il progetto non contiene response'))
   }
+  const labels: LabelDef[] = (Array.isArray(data.labels) ? data.labels : [])
+    .filter(isObj)
+    .map((l, i) => ({
+      id: str(l.id) || newId(),
+      name: str(l.name).trim(),
+      color: /^#[0-9a-f]{6}$/i.test(str(l.color))
+        ? str(l.color)
+        : LABEL_COLORS[i % LABEL_COLORS.length]
+    }))
+    .filter((l) => l.name)
+  const labelIds = new Set(labels.map((l) => l.id))
   const responses: ResponseDoc[] = data.responses.map((r: unknown, i: number) => {
     const where = `Response ${i + 1}`
     if (!isObj(r)) throw new Error(`${where}: ${t('formato non valido')}`)
@@ -129,7 +153,7 @@ export function parseProject(text: string): Project {
       templateId: str(r.templateId, 'import'),
       sw: /^[0-9A-F]{4}$/.test(sw) ? sw : '9000',
       nodes: r.nodes.map((n: unknown, j: number) =>
-        fromFileNode(n, `${where}, ${t('nodo')} ${j + 1}`)
+        fromFileNode(n, `${where}, ${t('nodo')} ${j + 1}`, labelIds)
       ),
       touched: true
     }
@@ -138,7 +162,8 @@ export function parseProject(text: string): Project {
   return {
     name: str(data.name) || t('Progetto'),
     responses,
-    activeId: (responses[idx] ?? responses[0]).id
+    activeId: (responses[idx] ?? responses[0]).id,
+    labels
   }
 }
 

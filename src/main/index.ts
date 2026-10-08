@@ -3,6 +3,16 @@ import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { buildMenu, recentLabel } from './menu'
+import { setLang, tr } from './messages'
+import {
+  addRecent,
+  clearRecent,
+  loadRecent,
+  onRecentChange,
+  recentFiles,
+  removeRecent
+} from './recent'
 
 function createWindow(): void {
   // Create the browser window.
@@ -28,14 +38,14 @@ function createWindow(): void {
   const contentsId = mainWindow.webContents.id
   mainWindow.on('close', (e) => {
     if (!dirtyWindows.has(contentsId)) return
-    const tr = MESSAGES[lang]
+    const m = tr()
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'warning',
-      buttons: [tr.cancel, tr.closeWithoutSaving],
+      buttons: [m.cancel, m.closeWithoutSaving],
       defaultId: 0,
       cancelId: 0,
-      message: tr.unsavedTitle,
-      detail: tr.unsavedDetail
+      message: m.unsavedTitle,
+      detail: m.unsavedDetail
     })
     if (choice === 0) e.preventDefault()
     else dirtyWindows.delete(contentsId)
@@ -84,7 +94,7 @@ async function renderPdf(html: string, title: string): Promise<Buffer> {
     const footer =
       `<div style="font-size:8px;width:100%;padding:0 12mm;color:#8a91a0;display:flex;` +
       `justify-content:space-between;font-family:sans-serif"><span>${escapeHtml(title)}</span>` +
-      `<span>${MESSAGES[lang].page} <span class="pageNumber"></span>/<span class="totalPages"></span></span></div>`
+      `<span>${tr().page} <span class="pageNumber"></span>/<span class="totalPages"></span></span></div>`
     return await win.webContents.printToPDF({
       pageSize: 'A4',
       printBackground: true,
@@ -100,43 +110,9 @@ async function renderPdf(html: string, title: string): Promise<Buffer> {
 
 // ---------------- Project files ----------------
 
-const MESSAGES = {
-  it: {
-    cancel: 'Annulla',
-    closeWithoutSaving: 'Chiudi senza salvare',
-    unsavedTitle: 'Il progetto ha modifiche non salvate',
-    unsavedDetail:
-      'Le modifiche restano nella sessione, ma non sono state salvate nel file del progetto.',
-    openTitle: 'Apri progetto',
-    saveTitle: 'Salva progetto',
-    fileType: 'Progetto EMV APDU Builder',
-    exportTitle: 'Esporta documentazione',
-    markdown: 'Documento Markdown',
-    pdf: 'Documento PDF',
-    page: 'Pagina'
-  },
-  en: {
-    cancel: 'Cancel',
-    closeWithoutSaving: 'Close without saving',
-    unsavedTitle: 'The project has unsaved changes',
-    unsavedDetail:
-      'Changes are kept in the session, but they have not been saved to the project file.',
-    openTitle: 'Open project',
-    saveTitle: 'Save project',
-    fileType: 'EMV APDU Builder project',
-    exportTitle: 'Export documentation',
-    markdown: 'Markdown document',
-    pdf: 'PDF document',
-    page: 'Page'
-  }
-}
-
-/** Language chosen in the renderer, used for native dialogs. */
-let lang: keyof typeof MESSAGES = 'it'
-
 function projectFilters(): Electron.FileFilter[] {
   return [
-    { name: MESSAGES[lang].fileType, extensions: ['emvproj'] },
+    { name: tr().fileType, extensions: ['emvproj'] },
     { name: 'JSON', extensions: ['json'] }
   ]
 }
@@ -148,15 +124,37 @@ function registerProjectIpc(): void {
   ipcMain.handle('project:open', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const options = {
-      title: MESSAGES[lang].openTitle,
+      title: tr().openTitle,
       filters: projectFilters(),
       properties: ['openFile' as const]
     }
     const r = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
     if (r.canceled || !r.filePaths[0]) return null
     const path = r.filePaths[0]
-    return { path, content: await readFile(path, 'utf8') }
+    const content = await readFile(path, 'utf8')
+    addRecent(path)
+    return { path, content }
   })
+
+  // Opens a known path (recent files). A missing file is dropped from the list.
+  ipcMain.handle('project:openPath', async (_e, path: string) => {
+    try {
+      const content = await readFile(path, 'utf8')
+      addRecent(path)
+      return { path, content }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        removeRecent(path)
+        throw new Error(tr().fileNotFound)
+      }
+      throw err
+    }
+  })
+
+  ipcMain.handle('recent:list', () =>
+    recentFiles().map((path) => ({ path, label: recentLabel(path) }))
+  )
+  ipcMain.handle('recent:clear', () => clearRecent())
 
   ipcMain.handle(
     'project:save',
@@ -165,7 +163,7 @@ function registerProjectIpc(): void {
       if (!target) {
         const win = BrowserWindow.fromWebContents(e.sender)
         const options = {
-          title: MESSAGES[lang].saveTitle,
+          title: tr().saveTitle,
           defaultPath: `${safeFileName(args.suggestedName)}.emvproj`,
           filters: projectFilters()
         }
@@ -176,18 +174,19 @@ function registerProjectIpc(): void {
         target = r.filePath
       }
       await writeFile(target, args.content, 'utf8')
+      addRecent(target)
       return target
     }
   )
 
   ipcMain.handle('doc:export', async (e, args: ExportArgs) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    const tr = MESSAGES[lang]
+    const m = tr()
     const ext = args.format === 'pdf' ? 'pdf' : 'md'
     const options = {
-      title: tr.exportTitle,
+      title: m.exportTitle,
       defaultPath: `${safeFileName(args.suggestedName)}.${ext}`,
-      filters: [{ name: args.format === 'pdf' ? tr.pdf : tr.markdown, extensions: [ext] }]
+      filters: [{ name: args.format === 'pdf' ? m.pdf : m.markdown, extensions: [ext] }]
     }
     const r = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
     if (r.canceled || !r.filePath) return null
@@ -198,7 +197,9 @@ function registerProjectIpc(): void {
   })
 
   ipcMain.on('app:lang', (_e, l: string) => {
-    if (l === 'it' || l === 'en') lang = l
+    if (l !== 'it' && l !== 'en') return
+    setLang(l)
+    buildMenu()
   })
 
   ipcMain.on('project:dirty', (e, dirty: boolean) => {
@@ -222,7 +223,14 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  loadRecent()
+  onRecentChange(() => {
+    buildMenu()
+    const list = recentFiles().map((path) => ({ path, label: recentLabel(path) }))
+    BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('recent:changed', list))
+  })
   registerProjectIpc()
+  buildMenu()
   createWindow()
 
   app.on('activate', function () {

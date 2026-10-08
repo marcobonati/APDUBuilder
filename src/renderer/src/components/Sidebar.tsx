@@ -1,25 +1,39 @@
 import { useMemo, useState } from 'react'
-import { TEMPLATES } from '../emv/templates'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
+import FileMenu from './FileMenu'
+import { LabelManager } from './Labels'
+import TemplatePicker from './TemplatePicker'
+import type { MenuCommandEvent, RecentFile } from '../../../preload/index.d'
 import { LANGS, t } from '../i18n'
 import type { Lang } from '../i18n'
 import { useEditor } from '../state/context'
 import { baseName } from '../state/projectFile'
 import type { Project, ResponseDoc } from '../state/store'
+import type { TlvNode } from '../emv/types'
+
+/** Number of tags using each label, across all responses. */
+function labelUsage(project: Project): Map<string, number> {
+  const m = new Map<string, number>()
+  const walk = (nodes: TlvNode[]): void => {
+    for (const n of nodes) {
+      for (const l of n.labels ?? []) m.set(l, (m.get(l) ?? 0) + 1)
+      walk(n.children)
+    }
+  }
+  for (const r of project.responses) walk(r.nodes)
+  return m
+}
 
 interface Props {
   project: Project
   filePath: string | null
   dirty: boolean
   onSelectTemplate: (t: ResponseTemplate) => void
-  onImport: () => void
-  onNew: () => void
-  onOpen: () => void
-  onSave: () => void
-  onSaveAs: () => void
   onLang: (lang: Lang) => void
-  onExportDoc: () => void
+  /** File menu commands (same as the native application menu). */
+  onCommand: (cmd: MenuCommandEvent['cmd'], path?: string) => void
+  recent: RecentFile[]
 }
 
 function ResponseItem({
@@ -114,13 +128,16 @@ function ResponseItem({
 export default function Sidebar(props: Props): React.JSX.Element {
   const { project, filePath, dirty } = props
   const { dispatch, lang } = useEditor()
+  const [showResponses, setShowResponses] = useState(true)
   const [showTemplates, setShowTemplates] = useState(true)
-  const groups = [...new Set(TEMPLATES.map((tpl) => tpl.group))]
+  const [showLabels, setShowLabels] = useState(true)
+  const usage = useMemo(() => labelUsage(project), [project])
 
   return (
     <nav className="sidebar">
       <div className="project">
         <div className="brand-row">
+          <FileMenu recent={props.recent} onCommand={props.onCommand} />
           <span className="brand-title">EMV APDU Builder</span>
           <span className="lang-switch" role="group" aria-label={t('Lingua')}>
             {LANGS.map((l) => (
@@ -146,86 +163,59 @@ export default function Sidebar(props: Props): React.JSX.Element {
           {filePath ? `${baseName(filePath)}.emvproj` : t('Non ancora salvato')}
           {dirty && <span className="muted"> · {t('modificato')}</span>}
         </div>
-        <div className="project-actions">
-          <button className="btn small" onClick={props.onNew} title={`${t('Nuovo progetto')} (⌘N)`}>
-            {t('Nuovo')}
-          </button>
-          <button className="btn small" onClick={props.onOpen} title={`${t('Apri progetto')} (⌘O)`}>
-            {t('Apri…')}
-          </button>
-          <button
-            className={`btn small ${dirty ? 'primary' : ''}`}
-            onClick={props.onSave}
-            title={`${t('Salva')} (⌘S)`}
-          >
-            {t('Salva')}
-          </button>
-          <button className="btn small" onClick={props.onSaveAs} title={`${t('Salva come')} (⇧⌘S)`}>
-            {t('Salva come…')}
-          </button>
-          <button
-            className="btn small"
-            onClick={props.onExportDoc}
-            title={`${t('Esporta documentazione')} (⌘E)`}
-          >
-            {t('Documentazione…')}
-          </button>
-        </div>
       </div>
 
       <div className="sidebar-scroll">
-        <div className="tpl-group">
-          <div className="tpl-group-title">
-            {t('Response del progetto ({n})', { n: project.responses.length })}
-          </div>
-          {project.responses.map((r, i) => (
-            <ResponseItem
-              key={r.id}
-              r={r}
-              active={r.id === project.activeId}
-              index={i}
-              count={project.responses.length}
-            />
-          ))}
-        </div>
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowResponses(!showResponses)}>
+            <span className="tpl-caret">{showResponses ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Response del progetto')}</span>
+            <span className="tpl-count">{project.responses.length}</span>
+          </button>
+          {showResponses && (
+            <div className="side-section-body">
+              {project.responses.map((r, i) => (
+                <ResponseItem
+                  key={r.id}
+                  r={r}
+                  active={r.id === project.activeId}
+                  index={i}
+                  count={project.responses.length}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div className="tpl-section">
-          <button className="tpl-section-head" onClick={() => setShowTemplates(!showTemplates)}>
-            {showTemplates ? '▾' : '▸'} {t('Nuova response da template')}
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowLabels(!showLabels)}>
+            <span className="tpl-caret">{showLabels ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Label')}</span>
+            <span className="tpl-count">{project.labels.length}</span>
+          </button>
+          {showLabels && (
+            <div className="side-section-body">
+              <LabelManager usage={usage} />
+            </div>
+          )}
+        </section>
+
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowTemplates(!showTemplates)}>
+            <span className="tpl-caret">{showTemplates ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Template di risposta')}</span>
           </button>
           {showTemplates && (
-            <>
+            <div className="side-section-body">
               <div className="muted small tpl-help">
                 {t(
                   'Aggiunge una response al progetto (sostituisce quella attiva se non è ancora stata modificata).'
                 )}
               </div>
-              {groups.map((g) => (
-                <div key={g} className="tpl-group">
-                  <div className="tpl-group-title">{t(g)}</div>
-                  {TEMPLATES.filter((tpl) => tpl.group === g).map((tpl) => (
-                    <button
-                      key={tpl.id}
-                      className="tpl"
-                      onClick={() => props.onSelectTemplate(tpl)}
-                    >
-                      <span className="tpl-name">{t(tpl.name)}</span>
-                      {tpl.command.apdu && (
-                        <span className="tpl-cmd mono">{tpl.command.apdu.substr(0, 8)}…</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </>
+              <TemplatePicker onSelect={props.onSelectTemplate} />
+            </div>
           )}
-        </div>
-      </div>
-
-      <div className="sidebar-foot">
-        <button className="btn wide" onClick={props.onImport}>
-          ⤓ {t('Importa response da hex')}
-        </button>
+        </section>
       </div>
     </nav>
   )

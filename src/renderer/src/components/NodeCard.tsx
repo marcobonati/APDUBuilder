@@ -14,6 +14,9 @@ import type { TlvNode } from '../emv/types'
 import { t } from '../i18n'
 import { useEditor } from '../state/context'
 import AddTagMenu from './AddTagMenu'
+import { LabelChip, LabelPicker } from './Labels'
+import { nodeLabels } from '../state/labels'
+import NoteEditor, { NoteView } from './NoteEditor'
 import ValueEditor from './editors/ValueEditor'
 
 interface Props {
@@ -76,8 +79,16 @@ function TagBadge({ node }: { node: TlvNode }): React.JSX.Element {
 }
 
 export default function NodeCard({ node, parent, index, count, depth }: Props): React.JSX.Element {
-  const { dispatch, hovered, setHovered, selected, setSelected, scrollTarget, issuesByNode } =
-    useEditor()
+  const {
+    dispatch,
+    hovered,
+    setHovered,
+    selected,
+    setSelected,
+    scrollTarget,
+    issuesByNode,
+    labels
+  } = useEditor()
   const ref = useRef<HTMLDivElement>(null)
   const def = tagDef(node.tag)
   const container = hasChildren(node)
@@ -101,6 +112,9 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
 
   const update = (patch: Partial<TlvNode>): void => dispatch({ type: 'update', id: node.id, patch })
   const [showLen, setShowLen] = useState(!!node.lengthOverride)
+  const [editingNote, setEditingNote] = useState(false)
+  const applied = nodeLabels(node, labels)
+  const hasNote = !!node.note?.trim()
 
   return (
     <div
@@ -149,6 +163,13 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
             {node.fixed && <span className="pill fixed">{t('valore da specifica')}</span>}
             {node.concat && <span className="pill f1">{t('formato 1 · valori concatenati')}</span>}
             {inFormat1 && <span className="pill f1">{t('senza tag/lunghezza')}</span>}
+            {applied.map((l) => (
+              <LabelChip
+                key={l.id}
+                label={l}
+                onRemove={() => dispatch({ type: 'toggleLabel', nodeId: node.id, labelId: l.id })}
+              />
+            ))}
           </div>
           {summary && <div className="node-summary">{summary}</div>}
         </div>
@@ -169,6 +190,31 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
           )}
           {(node.raw || inFormat1) && <span className="len-badge static">{len} B</span>}
           <div className="node-actions">
+            <button
+              className={`icon-btn ${hasNote ? 'on' : ''}`}
+              title={hasNote ? t('Modifica nota') : t('Aggiungi nota')}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (node.collapsed) update({ collapsed: false })
+                setEditingNote(!editingNote)
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                <path d="M14 3v6h6M8 13h8M8 17h5" />
+              </svg>
+            </button>
+            <LabelPicker node={node} />
             <button
               className="icon-btn"
               title={t('Sposta su')}
@@ -210,6 +256,27 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
               {node.hint && <span className="hint">💡 {t(node.hint)}. </span>}
               {!node.raw && t(def.desc)}
             </div>
+          )}
+
+          {editingNote ? (
+            <NoteEditor
+              note={node.note ?? ''}
+              onChange={(note) => update({ note: note || undefined })}
+              onDone={() => setEditingNote(false)}
+            />
+          ) : (
+            hasNote && (
+              <div
+                className="node-note"
+                title={t('Doppio clic per modificare la nota')}
+                onDoubleClick={(e) => {
+                  e.stopPropagation()
+                  setEditingNote(true)
+                }}
+              >
+                <NoteView note={node.note!} />
+              </div>
+            )
           )}
 
           {showLen && !node.raw && !inFormat1 && (

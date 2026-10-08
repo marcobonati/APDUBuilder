@@ -16,10 +16,30 @@ export interface ResponseDoc extends Doc {
   touched?: boolean
 }
 
+/** Custom label that can be applied to tags (e.g. Dynamic, Static). */
+export interface LabelDef {
+  id: string
+  name: string
+  color: string
+}
+
+/** Colors offered to new labels, in order. Readable on both themes. */
+export const LABEL_COLORS = [
+  '#3d7be0',
+  '#2e9e5b',
+  '#d08a1c',
+  '#cf4a4a',
+  '#8e5cd9',
+  '#1fa3a3',
+  '#d4549b',
+  '#7a8394'
+]
+
 export interface Project {
   name: string
   responses: ResponseDoc[]
   activeId: string
+  labels: LabelDef[]
 }
 
 export interface State {
@@ -55,6 +75,11 @@ export type Action =
   | { type: 'deleteResponse'; id: string }
   | { type: 'moveResponse'; id: string; dir: -1 | 1 }
   | { type: 'renameProject'; name: string }
+  // Labels
+  | { type: 'addLabel'; label: LabelDef; applyTo?: string }
+  | { type: 'updateLabel'; id: string; patch: Partial<Omit<LabelDef, 'id'>> }
+  | { type: 'deleteLabel'; id: string }
+  | { type: 'toggleLabel'; nodeId: string; labelId: string }
   | { type: 'openProject'; project: Project; filePath: string | null }
   | { type: 'saved'; filePath: string | null }
   | { type: 'undo' }
@@ -113,7 +138,7 @@ export function newResponse(doc: Doc, name: string): ResponseDoc {
 
 export function newProject(doc: Doc, name: string): Project {
   const r = newResponse(doc, name)
-  return { name: t('Nuovo progetto'), responses: [r], activeId: r.id }
+  return { name: t('Nuovo progetto'), responses: [r], activeId: r.id, labels: [] }
 }
 
 export function isDirty(s: State): boolean {
@@ -283,6 +308,51 @@ export function reducer(s: State, a: Action): State {
       })
     case 'renameProject':
       return commit(s, { ...p, name: a.name }, 'project-name')
+
+    case 'addLabel': {
+      // Optionally applied right away to the node it was created from (one undo step).
+      const responses = !a.applyTo
+        ? p.responses
+        : p.responses.map((r) =>
+            r.id === p.activeId
+              ? {
+                  ...r,
+                  touched: true,
+                  nodes: mapTree(r.nodes, (n) =>
+                    n.id === a.applyTo ? { ...n, labels: [...(n.labels ?? []), a.label.id] } : n
+                  )
+                }
+              : r
+          )
+      return commit(s, { ...p, labels: [...p.labels, a.label], responses })
+    }
+    case 'updateLabel':
+      return commit(
+        s,
+        { ...p, labels: p.labels.map((l) => (l.id === a.id ? { ...l, ...a.patch } : l)) },
+        `label:${a.id}`
+      )
+    case 'deleteLabel': {
+      // Also removed from every node of every response.
+      const strip = (n: TlvNode): TlvNode =>
+        n.labels?.includes(a.id) ? { ...n, labels: n.labels.filter((l) => l !== a.id) } : n
+      return commit(s, {
+        ...p,
+        labels: p.labels.filter((l) => l.id !== a.id),
+        responses: p.responses.map((r) => ({ ...r, nodes: mapTree(r.nodes, strip) }))
+      })
+    }
+    case 'toggleLabel':
+      return editActive(s, (r) => ({
+        nodes: mapTree(r.nodes, (n) => {
+          if (n.id !== a.nodeId) return n
+          const has = n.labels?.includes(a.labelId)
+          const labels = has
+            ? n.labels!.filter((l) => l !== a.labelId)
+            : [...(n.labels ?? []), a.labelId]
+          return { ...n, labels: labels.length ? labels : undefined }
+        })
+      }))
     case 'openProject':
       return {
         project: a.project,
@@ -336,7 +406,9 @@ export function loadSession(): Session | null {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const s = JSON.parse(raw) as Session
-      if (s.project?.responses?.length) return s
+      // Sessions saved before labels existed.
+      if (s.project?.responses?.length)
+        return { ...s, project: { ...s.project, labels: s.project.labels ?? [] } }
     }
     // Single document saved by the previous version.
     const legacy = localStorage.getItem(LEGACY_KEY)

@@ -3,6 +3,8 @@ import {
   CVM_CONDITIONS,
   CVM_METHODS,
   describeValue,
+  hexToCompressed,
+  luhn,
   parseAfl,
   parseCvm,
   parseTrack2
@@ -14,7 +16,11 @@ import { TEMPLATES } from '../emv/templates'
 import { hasChildren, isConstructedTag, parseDol, tagError, valueHex } from '../emv/tlv'
 import type { TagDef, TlvNode } from '../emv/types'
 import { t } from '../i18n'
+import { useEditor } from '../state/context'
 import type { HelpTarget } from '../state/context'
+import { LabelChip } from './Labels'
+import { nodeLabels } from '../state/labels'
+import { NoteView } from './NoteEditor'
 import { FORMAT_HELP, TAG_CLASSES } from '../emv/helpFormats'
 
 interface Props {
@@ -63,6 +69,94 @@ function templateUses(tag: string): TemplateUse[] {
     name: t(tpl.name),
     command: tpl.command.apdu ? t(tpl.command.name) : ''
   }))
+}
+
+/** Tags carrying a PAN, for which the help explains the Luhn check. */
+const LUHN_TAGS = ['5A', '57', '9F6B']
+
+function panOf(tag: string, value: string): string {
+  if (!value || !isHexBytes(value)) return ''
+  return tag === '5A' ? hexToCompressed(value) : parseTrack2(value).pan
+}
+
+/** Explanation of the Luhn check, with the computation on the current PAN. */
+function LuhnSection({ pan }: { pan: string }): React.JSX.Element {
+  const usable = /^\d{2,19}$/.test(pan)
+  const r = usable ? luhn(pan) : null
+  return (
+    <section className="help-section">
+      <h3>{t('Controllo Luhn')}</h3>
+      <p>
+        {t(
+          'Il controllo Luhn (algoritmo "mod 10", ISO/IEC 7812-1) verifica la cifra di controllo del PAN: l\'ultima cifra è scelta dall\'issuer in modo che la somma calcolata sulle cifre sia un multiplo di 10.'
+        )}
+      </p>
+      <p>
+        {t(
+          'Serve a intercettare errori di digitazione o trascrizione: rileva qualsiasi cifra singola sbagliata e quasi tutti gli scambi tra due cifre adiacenti. Non è un controllo di sicurezza: chiunque può calcolare un PAN che lo supera.'
+        )}
+      </p>
+      <ol className="help-list">
+        <li>
+          {t(
+            "Partendo dall'ultima cifra (la cifra di controllo) e procedendo verso sinistra, raddoppia una cifra sì e una no: la seconda da destra, la quarta, e così via."
+          )}
+        </li>
+        <li>
+          {t(
+            'Se un raddoppio supera 9, sottrai 9 (equivale a sommare le due cifre del risultato).'
+          )}
+        </li>
+        <li>{t('Somma tutti i valori ottenuti, compresa la cifra di controllo.')}</li>
+        <li>{t('Il PAN è valido se la somma è un multiplo di 10.')}</li>
+      </ol>
+      <p className="muted small">
+        {t(
+          'EMV non chiede al terminale di verificarlo sui dati letti dal chip, ma acquirer e sistemi di autorizzazione scartano i PAN non validi: per questo anche i PAN usati nei test devono superarlo.'
+        )}
+      </p>
+      {r && (
+        <>
+          <div className="muted small">{t('Calcolo sul PAN corrente:')}</div>
+          <div
+            className="luhn-grid"
+            style={{ gridTemplateColumns: `repeat(${r.steps.length}, 1fr)` }}
+          >
+            {r.steps.map((st, i) => (
+              <span key={`d${i}`} className={`luhn-digit ${st.doubled ? 'doubled' : ''}`}>
+                {st.digit}
+              </span>
+            ))}
+            {r.steps.map((st, i) => (
+              <span
+                key={`v${i}`}
+                className={`luhn-value ${st.doubled ? 'doubled' : ''} ${i === r.steps.length - 1 ? 'check' : ''}`}
+              >
+                {st.value}
+              </span>
+            ))}
+          </div>
+          <div className="muted small">
+            {t(
+              'Riga sopra: cifre del PAN (evidenziate quelle raddoppiate). Riga sotto: valore sommato.'
+            )}
+          </div>
+          <div className={r.valid ? 'help-decoded' : 'luhn-bad'}>
+            {t('Somma = {sum}', { sum: r.sum })} →{' '}
+            {r.valid
+              ? t('multiplo di 10: PAN valido ✓')
+              : t(
+                  'non multiplo di 10: PAN non valido. Cifra di controllo attesa {exp} (presente {cur}).',
+                  {
+                    exp: r.expectedCheckDigit,
+                    cur: r.steps[r.steps.length - 1].digit
+                  }
+                )}
+          </div>
+        </>
+      )}
+    </section>
+  )
 }
 
 function safeParseDol(hex: string): { tag: string; len: number }[] | null {
@@ -215,6 +309,7 @@ export default function HelpPanel({
   onToggleLock,
   onClose
 }: Props): React.JSX.Element {
+  const { labels } = useEditor()
   const found = target?.nodeId ? findWithParent(nodes, target.nodeId) : null
   const node = found?.node ?? null
   const tag = node ? node.tag : (target?.tag ?? '')
@@ -228,6 +323,7 @@ export default function HelpPanel({
   const value = node && !hasChildren(node) ? node.value : ''
   const decoded = value ? describeValue(def, value) : ''
   const inFormat1 = found?.parent?.concat === true
+  const applied = node ? nodeLabels(node, labels) : []
 
   const header = (
     <div className="help-head">
@@ -235,10 +331,24 @@ export default function HelpPanel({
       <div className="help-head-actions">
         <button
           className={`icon-btn ${locked ? 'active' : ''}`}
-          title={locked ? t('Sblocca: segui il puntatore') : t('Blocca su questo tag')}
+          title={locked ? t('Sgancia: segui il puntatore') : t('Fissa su questo tag')}
           onClick={onToggleLock}
         >
-          {locked ? '🔒' : '🔓'}
+          <svg
+            className={`pin-icon ${locked ? 'pinned' : ''}`}
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill={locked ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 17v5" />
+            <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+          </svg>
         </button>
         <button className="icon-btn" title={t('Chiudi guida')} onClick={onClose}>
           ×
@@ -303,6 +413,19 @@ export default function HelpPanel({
         {def.desc && <p className="help-lead">{t(def.desc)}</p>}
         {node?.hint && <p className="hint">💡 {t(node.hint)}</p>}
 
+        {node && (applied.length > 0 || node.note?.trim()) && (
+          <Section title={t('Note')}>
+            {applied.length > 0 && (
+              <div className="help-pills">
+                {applied.map((l) => (
+                  <LabelChip key={l.id} label={l} />
+                ))}
+              </div>
+            )}
+            {node.note?.trim() && <NoteView note={node.note} />}
+          </Section>
+        )}
+
         {help && (
           <Section title={t('Utilizzo')}>
             <p>{t(help.usage)}</p>
@@ -340,6 +463,8 @@ export default function HelpPanel({
             )}
           </Section>
         )}
+
+        {LUHN_TAGS.includes(tag) && <LuhnSection pan={panOf(tag, value)} />}
 
         {node && hasChildren(node) && (
           <Section title={t('Contenuto')}>

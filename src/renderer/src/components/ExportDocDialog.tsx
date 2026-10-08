@@ -64,7 +64,7 @@ export default function ExportDocDialog({ project, onClose, onDone }: Props): Re
         <h2>{t('Esporta documentazione')}</h2>
         <p className="muted small">
           {t(
-            'Genera un documento con tutte le APDU response del progetto: comando di riferimento, byte RAW, tabella dei campi con valori decodificati e descrizioni.'
+            'Genera un documento con tutte le APDU response del progetto: comando di riferimento, byte RAW, tabella dei campi con valori decodificati e descrizioni, label e note.'
           )}
         </p>
 
@@ -114,6 +114,22 @@ export default function ExportDocDialog({ project, onClose, onDone }: Props): Re
                   onChange={(e) => set({ includeIssues: e.target.checked })}
                 />{' '}
                 {t('Avvisi di verifica')}
+              </label>
+              <label className="small">
+                <input
+                  type="checkbox"
+                  checked={options.includeLabels}
+                  onChange={(e) => set({ includeLabels: e.target.checked })}
+                />{' '}
+                {t('Label')}
+              </label>
+              <label className="small">
+                <input
+                  type="checkbox"
+                  checked={options.includeNotes}
+                  onChange={(e) => set({ includeNotes: e.target.checked })}
+                />{' '}
+                {t('Note sui tag')}
               </label>
             </div>
             <div className="muted small">
