@@ -282,7 +282,8 @@ const DEFS: TagDef[] = [
       { value: '05', label: '05 – JCB' },
       { value: '06', label: '06 – Discover' },
       { value: '07', label: '07 – UnionPay' },
-      { value: '08', label: '08 – EMVCo C-8' }
+      { value: '08', label: '08 – EMVCo C-8' },
+      { value: '2E', label: '2E – CPACE (kernel pan-europeo ECPC)' }
     ]
   },
   {
