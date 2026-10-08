@@ -19,7 +19,8 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    build: { ...build, cssMinify: true, modulePreload: false },
+    // Loaded from disk: a single ~500 KB chunk is fine, no need to warn about it.
+    build: { ...build, cssMinify: true, modulePreload: false, chunkSizeWarningLimit: 1024 },
     esbuild,
     plugins: [react()]
   }

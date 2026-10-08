@@ -17,14 +17,31 @@ electronLanguages:
 compression: maximum
 asarUnpack:
   - resources/**
+# Every artifact name carries platform and architecture, so that building all
+# targets into dist/ never overwrites a file.
 win:
   executableName: emv-apdu-builder
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+    - target: portable
+      arch: [x64]
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${name}-${version}-win-${arch}-setup.${ext}
+  # One installer per architecture, without the extra x64+arm64 bundle (twice the size).
+  buildUniversalInstaller: false
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+portable:
+  artifactName: ${name}-${version}-win-${arch}-portable.${ext}
 mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -33,16 +50,19 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
+# snap is left out: it needs snapcraft, which is not available on macOS/Windows.
 linux:
   target:
-    - AppImage
-    - snap
-    - deb
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
   maintainer: electronjs.org
   category: Utility
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
 npmRebuild: false
 publish:
   provider: generic
