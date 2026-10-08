@@ -19,6 +19,7 @@ interface Props {
   onSave: () => void
   onSaveAs: () => void
   onLang: (lang: Lang) => void
+  onExportDoc: () => void
 }
 
 function ResponseItem({
@@ -161,6 +162,13 @@ export default function Sidebar(props: Props): React.JSX.Element {
           </button>
           <button className="btn small" onClick={props.onSaveAs} title={`${t('Salva come')} (⇧⌘S)`}>
             {t('Salva come…')}
+          </button>
+          <button
+            className="btn small"
+            onClick={props.onExportDoc}
+            title={`${t('Esporta documentazione')} (⌘E)`}
+          >
+            {t('Documentazione…')}
           </button>
         </div>
       </div>

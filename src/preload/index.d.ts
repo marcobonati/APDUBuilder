@@ -12,6 +12,16 @@ export interface Api {
   setDirty: (dirty: boolean) => void
   /** Language used by native dialogs. */
   setLang: (lang: 'it' | 'en') => void
+  /**
+   * Asks where to save and writes the documentation: Markdown as is, or the
+   * HTML content printed to PDF. Returns the path, or null when cancelled.
+   */
+  exportDoc: (args: {
+    format: 'md' | 'pdf'
+    content: string
+    suggestedName: string
+    title: string
+  }) => Promise<string | null>
 }
 
 declare global {

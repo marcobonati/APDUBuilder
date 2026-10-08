@@ -8,6 +8,7 @@ Tool desktop (Electron + React + TypeScript) per comporre APDU response EMV in m
 
 - Organizza più response in un **progetto** (es. tutte le risposte di un profilo carta) e salvalo/aprilo come file `.emvproj` (JSON leggibile) con ⌘S / ⇧⌘S / ⌘O / ⌘N. La sessione corrente viene comunque conservata automaticamente tra un avvio e l'altro.
 
+- **Documentazione esportabile** in Markdown o PDF (⌘E): per ogni response comando di riferimento, byte RAW, tabella dei campi con valori decodificati e descrizioni, struttura TLV e avvisi di verifica, con anteprima prima dell'esportazione.
 - Interfaccia in **italiano o inglese** (selettore IT/EN in alto a sinistra; di default segue la lingua di sistema). I testi sono in `src/renderer/src/i18n/`: le chiavi sono le stringhe italiane, le traduzioni inglesi stanno in `en.ts`.
 
 Il core EMV (TLV, dizionario tag, template, validazione) si trova in `src/renderer/src/emv/`.

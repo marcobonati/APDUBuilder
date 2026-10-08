@@ -14,6 +14,7 @@ export type ValueFormat =
   | 'cvm' // CVM List
   | 'track2' // Track 2 equivalent data
   | 'langs' // an, sequence of ISO 639-1 codes (Language Preference)
+  | 'bic' // an, ISO 9362 Business Identifier Code
 
 export interface EnumOption {
   value: string

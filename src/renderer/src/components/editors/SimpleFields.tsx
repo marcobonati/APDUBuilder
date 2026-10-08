@@ -16,27 +16,43 @@ interface Props {
   onChange: (hex: string) => void
 }
 
-export function TextField({ def, value, onChange }: Props): React.JSX.Element {
+interface TextFieldProps extends Props {
+  /** Field label, defaults to "Testo (format)". */
+  label?: string
+  placeholder?: string
+  /** Converts the input to uppercase while typing (e.g. BIC). */
+  uppercase?: boolean
+}
+
+export function TextField({
+  def,
+  value,
+  onChange,
+  label,
+  placeholder,
+  uppercase
+}: TextFieldProps): React.JSX.Element {
   const [text, setText] = useSynced(value, hexToText, textToHex)
   const max = def.max
   const nonPrintable = value !== '' && !isPrintableHex(value)
   return (
     <label className="field">
-      <span className="field-label">
-        {t('Testo')} ({def.format})
-      </span>
+      <span className="field-label">{label ?? `${t('Testo')} (${def.format})`}</span>
       <div className="field-row">
         <input
-          className="input"
+          className={`input ${uppercase ? 'mono' : ''}`}
           value={nonPrintable ? '' : text}
           placeholder={
-            nonPrintable ? t('Valore non stampabile: modificalo in hex') : t('Scrivi il testo…')
+            nonPrintable
+              ? t('Valore non stampabile: modificalo in hex')
+              : (placeholder ?? t('Scrivi il testo…'))
           }
           maxLength={max}
           spellCheck={false}
           onChange={(e) => {
-            setText(e.target.value)
-            onChange(textToHex(e.target.value))
+            const v = uppercase ? e.target.value.toUpperCase() : e.target.value
+            setText(v)
+            onChange(textToHex(v))
           }}
         />
         {max !== undefined && (

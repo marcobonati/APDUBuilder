@@ -47,6 +47,17 @@ function StructuredEditor({ def, value, onChange }: Props): React.JSX.Element | 
       return <CvmEditor value={value} onChange={onChange} />
     case 'track2':
       return <Track2Editor value={value} onChange={onChange} />
+    case 'bic':
+      return (
+        <TextField
+          def={def}
+          value={value}
+          onChange={onChange}
+          uppercase
+          label={t('BIC (ASCII) – convertito automaticamente in HEX')}
+          placeholder={t('es. {ex}', { ex: 'DEUTDEFF' })}
+        />
+      )
     case 'langs':
       return <LanguageEditor value={value} onChange={onChange} />
   }

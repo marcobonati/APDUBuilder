@@ -7,6 +7,38 @@ import { t } from '../i18n'
 
 const FORMAT1_TAGS = ['82', '94', '9F27', '9F36', '9F26', '9F10', '9F4B']
 
+const MENU_WIDTH = 420
+const MENU_MAX_HEIGHT = 400
+/** Below this height the menu opens upwards when there is more room above. */
+const MENU_MIN_HEIGHT = 260
+const GAP = 4
+const MARGIN = 8
+
+interface MenuPos {
+  left: number
+  width: number
+  maxHeight: number
+  top?: number
+  bottom?: number
+}
+
+/**
+ * The menu uses fixed positioning so it is not clipped by the scrolling editor,
+ * and opens upwards when there is not enough room below the button.
+ */
+function placeMenu(anchor: DOMRect): MenuPos {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const width = Math.min(MENU_WIDTH, vw - 2 * MARGIN)
+  const left = Math.min(Math.max(anchor.left, MARGIN), vw - width - MARGIN)
+  const below = vh - anchor.bottom - GAP - MARGIN
+  const above = anchor.top - GAP - MARGIN
+  if (below >= MENU_MIN_HEIGHT || below >= above) {
+    return { left, width, top: anchor.bottom + GAP, maxHeight: Math.min(MENU_MAX_HEIGHT, below) }
+  }
+  return { left, width, bottom: vh - anchor.top + GAP, maxHeight: Math.min(MENU_MAX_HEIGHT, above) }
+}
+
 interface Props {
   parent: TlvNode | null
   onAdd: (node: TlvNode) => void
@@ -14,17 +46,30 @@ interface Props {
 }
 
 export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.Element {
-  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<MenuPos | null>(null)
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const open = pos !== null
 
   useEffect(() => {
     if (!open) return
-    const close = (e: MouseEvent): void => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    const close = (): void => setPos(null)
+    const onMouseDown = (e: MouseEvent): void => {
+      if (ref.current && !ref.current.contains(e.target as Node)) close()
     }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
+    // A fixed menu would drift away from its button: close it when the page scrolls.
+    const onScroll = (e: Event): void => {
+      if (!menuRef.current?.contains(e.target as Node)) close()
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', close)
+    }
   }, [open])
 
   const suggested = useMemo(() => {
@@ -54,7 +99,7 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
       raw,
       example: raw ? undefined : tagDef(tag).example
     })
-    setOpen(false)
+    setPos(null)
     setQuery('')
   }
 
@@ -67,13 +112,26 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
 
   return (
     <div className="add-menu" ref={ref}>
-      <button className="btn ghost small" onClick={() => setOpen(!open)}>
+      <button
+        className="btn ghost small"
+        onClick={(e) => setPos(open ? null : placeMenu(e.currentTarget.getBoundingClientRect()))}
+      >
         +{' '}
         {label ??
           (parent ? t('Aggiungi tag in {tag}', { tag: parent.tag }) : t('Aggiungi tag radice'))}
       </button>
-      {open && (
-        <div className="menu">
+      {pos && (
+        <div
+          ref={menuRef}
+          className={`menu ${pos.bottom !== undefined ? 'up' : ''}`}
+          style={{
+            left: pos.left,
+            width: pos.width,
+            top: pos.top,
+            bottom: pos.bottom,
+            maxHeight: pos.maxHeight
+          }}
+        >
           <input
             autoFocus
             className="input small"
@@ -82,7 +140,7 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && customValid) add(custom)
-              if (e.key === 'Escape') setOpen(false)
+              if (e.key === 'Escape') setPos(null)
             }}
           />
           <div className="menu-list">

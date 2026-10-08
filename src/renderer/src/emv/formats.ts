@@ -199,6 +199,21 @@ export function luhnValid(pan: string): boolean {
   return sum % 10 === 0
 }
 
+// ---------------- BIC ----------------
+
+export interface Bic {
+  bank: string
+  country: string
+  location: string
+  branch: string
+}
+
+/** Parses an ISO 9362 BIC (uppercase, 8 or 11 characters); null when malformed. */
+export function parseBic(text: string): Bic | null {
+  const m = /^([A-Z]{4})([A-Z]{2})([A-Z0-9]{2})([A-Z0-9]{3})?$/.exec(text)
+  return m ? { bank: m[1], country: m[2], location: m[3], branch: m[4] ?? '' } : null
+}
+
 // ---------------- Description ----------------
 
 /** One line human readable interpretation of a primitive value. */
@@ -214,6 +229,16 @@ export function describeValue(def: TagDef, hex: string): string {
       case 'an':
       case 'ans':
         return isPrintableHex(hex) ? `"${hexToText(hex)}"` : t('contiene caratteri non stampabili')
+      case 'bic': {
+        const b = parseBic(hexToText(hex))
+        if (!isPrintableHex(hex) || !b) return isPrintableHex(hex) ? `"${hexToText(hex)}"` : ''
+        return [
+          `${t('Banca')} ${b.bank}`,
+          `${t('Paese')} ${b.country}`,
+          `${t('Località')} ${b.location}`,
+          b.branch ? `${t('Filiale')} ${b.branch}` : t('sede principale')
+        ].join(' · ')
+      }
       case 'langs':
         return isPrintableHex(hex)
           ? splitLanguages(hexToText(hex)).map(languageName).join(' → ')
@@ -301,6 +326,20 @@ export function valueIssues(def: TagDef, hex: string): string[] {
     case 'ans':
       if (!isPrintableHex(hex)) out.push(t('Contiene caratteri non stampabili'))
       break
+    case 'bic': {
+      const text = hexToText(hex)
+      if (!isPrintableHex(hex)) out.push(t('Contiene caratteri non stampabili'))
+      else if (text && text.length !== 8 && text.length !== 11) {
+        out.push(t('Il BIC deve avere 8 o 11 caratteri (presenti {n})', { n: text.length }))
+      } else if (text && !parseBic(text)) {
+        out.push(
+          t(
+            'BIC non valido: atteso 4 lettere banca, 2 lettere paese, 2 caratteri località, filiale opzionale di 3'
+          )
+        )
+      }
+      break
+    }
     case 'langs': {
       const text = hexToText(hex)
       if (len % 2) {

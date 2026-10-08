@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import AddTagMenu from './components/AddTagMenu'
+import ExportDocDialog from './components/ExportDocDialog'
 import ImportDialog from './components/ImportDialog'
 import NodeCard from './components/NodeCard'
 import RawPanel from './components/RawPanel'
@@ -63,6 +64,7 @@ function App(): React.JSX.Element {
   const [selected, setSelected] = useState<string | null>(null)
   const [scrollTarget, setScrollTarget] = useState<{ id: string; n: number } | null>(null)
   const [importing, setImporting] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
 
   const active = activeResponse(state.project)
@@ -155,10 +157,11 @@ function App(): React.JSX.Element {
   }, [confirmDiscard])
 
   // Latest commands for the global key handler, registered once.
-  const commands = useRef({ save, open, createNew })
+  const exportDoc = useCallback(() => setExporting(true), [])
+  const commands = useRef({ save, open, createNew, exportDoc })
   useEffect(() => {
-    commands.current = { save, open, createNew }
-  }, [save, open, createNew])
+    commands.current = { save, open, createNew, exportDoc }
+  }, [save, open, createNew, exportDoc])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -173,6 +176,11 @@ function App(): React.JSX.Element {
       if (key === 'o') {
         e.preventDefault()
         commands.current.open()
+        return
+      }
+      if (key === 'e') {
+        e.preventDefault()
+        commands.current.exportDoc()
         return
       }
       if (key === 'n') {
@@ -230,6 +238,7 @@ function App(): React.JSX.Element {
           onOpen={open}
           onSave={() => save(false)}
           onSaveAs={() => save(true)}
+          onExportDoc={exportDoc}
           onLang={(l) => {
             setLang(l)
             setLangState(l)
@@ -359,6 +368,14 @@ function App(): React.JSX.Element {
             })
             setImporting(false)
           }}
+        />
+      )}
+
+      {exporting && (
+        <ExportDocDialog
+          project={state.project}
+          onClose={() => setExporting(false)}
+          onDone={showToast}
         />
       )}
 

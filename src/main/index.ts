@@ -55,6 +55,49 @@ function createWindow(): void {
   }
 }
 
+// ---------------- Documentation export ----------------
+
+interface ExportArgs {
+  format: 'md' | 'pdf'
+  /** Markdown text, or the HTML page to print for PDF. */
+  content: string
+  suggestedName: string
+  title: string
+}
+
+function safeFileName(name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, '_') || 'documentazione'
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** Prints the generated HTML to an A4 PDF in a hidden, script-less window. */
+async function renderPdf(html: string, title: string): Promise<Buffer> {
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { javascript: false, sandbox: true }
+  })
+  try {
+    await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    const footer =
+      `<div style="font-size:8px;width:100%;padding:0 12mm;color:#8a91a0;display:flex;` +
+      `justify-content:space-between;font-family:sans-serif"><span>${escapeHtml(title)}</span>` +
+      `<span>${MESSAGES[lang].page} <span class="pageNumber"></span>/<span class="totalPages"></span></span></div>`
+    return await win.webContents.printToPDF({
+      pageSize: 'A4',
+      printBackground: true,
+      margins: { top: 0.5, bottom: 0.6, left: 0.4, right: 0.4 },
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: footer
+    })
+  } finally {
+    win.destroy()
+  }
+}
+
 // ---------------- Project files ----------------
 
 const MESSAGES = {
@@ -66,7 +109,11 @@ const MESSAGES = {
       'Le modifiche restano nella sessione, ma non sono state salvate nel file del progetto.',
     openTitle: 'Apri progetto',
     saveTitle: 'Salva progetto',
-    fileType: 'Progetto EMV APDU Builder'
+    fileType: 'Progetto EMV APDU Builder',
+    exportTitle: 'Esporta documentazione',
+    markdown: 'Documento Markdown',
+    pdf: 'Documento PDF',
+    page: 'Pagina'
   },
   en: {
     cancel: 'Cancel',
@@ -76,7 +123,11 @@ const MESSAGES = {
       'Changes are kept in the session, but they have not been saved to the project file.',
     openTitle: 'Open project',
     saveTitle: 'Save project',
-    fileType: 'EMV APDU Builder project'
+    fileType: 'EMV APDU Builder project',
+    exportTitle: 'Export documentation',
+    markdown: 'Markdown document',
+    pdf: 'PDF document',
+    page: 'Page'
   }
 }
 
@@ -115,7 +166,7 @@ function registerProjectIpc(): void {
         const win = BrowserWindow.fromWebContents(e.sender)
         const options = {
           title: MESSAGES[lang].saveTitle,
-          defaultPath: `${args.suggestedName.replace(/[\\/:*?"<>|]/g, '_')}.emvproj`,
+          defaultPath: `${safeFileName(args.suggestedName)}.emvproj`,
           filters: projectFilters()
         }
         const r = win
@@ -128,6 +179,23 @@ function registerProjectIpc(): void {
       return target
     }
   )
+
+  ipcMain.handle('doc:export', async (e, args: ExportArgs) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const tr = MESSAGES[lang]
+    const ext = args.format === 'pdf' ? 'pdf' : 'md'
+    const options = {
+      title: tr.exportTitle,
+      defaultPath: `${safeFileName(args.suggestedName)}.${ext}`,
+      filters: [{ name: args.format === 'pdf' ? tr.pdf : tr.markdown, extensions: [ext] }]
+    }
+    const r = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
+    if (r.canceled || !r.filePath) return null
+    if (args.format === 'pdf')
+      await writeFile(r.filePath, await renderPdf(args.content, args.title))
+    else await writeFile(r.filePath, args.content, 'utf8')
+    return r.filePath
+  })
 
   ipcMain.on('app:lang', (_e, l: string) => {
     if (l === 'it' || l === 'en') lang = l

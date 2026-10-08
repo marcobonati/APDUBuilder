@@ -11,7 +11,13 @@ const api = {
     suggestedName: string
   ): Promise<string | null> => ipcRenderer.invoke('project:save', { content, path, suggestedName }),
   setDirty: (dirty: boolean): void => ipcRenderer.send('project:dirty', dirty),
-  setLang: (lang: 'it' | 'en'): void => ipcRenderer.send('app:lang', lang)
+  setLang: (lang: 'it' | 'en'): void => ipcRenderer.send('app:lang', lang),
+  exportDoc: (args: {
+    format: 'md' | 'pdf'
+    content: string
+    suggestedName: string
+    title: string
+  }): Promise<string | null> => ipcRenderer.invoke('doc:export', args)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

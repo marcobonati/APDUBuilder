@@ -329,10 +329,11 @@ const DEFS: TagDef[] = [
   {
     tag: '5F54',
     name: 'Bank Identifier Code (BIC)',
-    desc: 'BIC della banca.',
-    format: 'b',
+    desc: 'BIC della banca (ISO 9362): codice banca (4 lettere), paese (2 lettere), località (2 caratteri) e filiale opzionale (3 caratteri). 8 o 11 caratteri.',
+    format: 'bic',
     min: 8,
-    max: 11
+    max: 11,
+    example: '4445555444454646'
   },
   {
     tag: '5F55',
