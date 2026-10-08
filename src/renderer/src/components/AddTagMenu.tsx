@@ -4,6 +4,7 @@ import { newId, tagError } from '../emv/tlv'
 import { normalizeHex } from '../emv/hex'
 import type { TlvNode } from '../emv/types'
 import { t } from '../i18n'
+import { useEditor } from '../state/context'
 
 const FORMAT1_TAGS = ['82', '94', '9F27', '9F36', '9F26', '9F10', '9F4B']
 
@@ -46,6 +47,7 @@ interface Props {
 }
 
 export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.Element {
+  const { showHelp } = useEditor()
   const [pos, setPos] = useState<MenuPos | null>(null)
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -103,10 +105,18 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
     setQuery('')
   }
 
-  const item = (t: string): React.JSX.Element => (
-    <button key={t} className="menu-item" onClick={() => add(t)}>
-      <span className="tag-badge small">{t}</span>
-      <span>{tagDef(t).name}</span>
+  const item = (tag: string): React.JSX.Element => (
+    <button
+      key={tag}
+      className="menu-item"
+      onClick={() => add(tag)}
+      onMouseOver={(e) => {
+        e.stopPropagation()
+        showHelp({ tag })
+      }}
+    >
+      <span className="tag-badge small">{tag}</span>
+      <span>{tagDef(tag).name}</span>
     </button>
   )
 

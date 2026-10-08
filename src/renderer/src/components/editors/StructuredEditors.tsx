@@ -16,6 +16,7 @@ import { encodeDol, parseDol, tagError } from '../../emv/tlv'
 import { normalizeHex, toHexByte } from '../../emv/hex'
 import { useSynced } from '../../hooks/useSynced'
 import { t } from '../../i18n'
+import { useEditor } from '../../state/context'
 
 interface Props {
   value: string
@@ -37,6 +38,7 @@ function defaultLen(tag: string): number {
 }
 
 export function DolEditor({ value, onChange }: Props): React.JSX.Element {
+  const { showHelp } = useEditor()
   const toRows = (h: string): DolRow[] | null => {
     try {
       return parseDol(h)
@@ -82,7 +84,14 @@ export function DolEditor({ value, onChange }: Props): React.JSX.Element {
           {rows.map((r, i) => {
             const err = tagError(r.tag)
             return (
-              <tr key={i}>
+              <tr
+                key={i}
+                onMouseOver={(e) => {
+                  // Document the referenced data object instead of the DOL itself.
+                  e.stopPropagation()
+                  showHelp({ tag: r.tag })
+                }}
+              >
                 <td>
                   <input
                     className={`input small mono tag-input ${err ? 'invalid' : ''}`}

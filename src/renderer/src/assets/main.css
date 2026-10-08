@@ -1438,6 +1438,213 @@ select.input {
   text-decoration: underline;
 }
 
+/* ---------- Help panel ---------- */
+
+.app.with-help {
+  grid-template-columns: 250px minmax(420px, 1fr) minmax(300px, 24%) 340px;
+}
+
+.help-panel {
+  border-left: 1px solid var(--border);
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-head-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.help-head .icon-btn.active {
+  background: var(--accent-bg);
+}
+
+.help-empty {
+  padding: 24px 16px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.help-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.help-body p {
+  margin: 0;
+}
+
+.help-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.help-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.help-lead {
+  color: var(--text);
+}
+
+.help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.help-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+
+.help-flow {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.help-flow li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  column-gap: 8px;
+  padding: 2px 0;
+  color: var(--text-3);
+  position: relative;
+}
+
+.help-flow li::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.help-flow li:first-child::before {
+  top: 9px;
+}
+
+.help-flow li:last-child::before {
+  bottom: calc(100% - 9px);
+}
+
+.help-flow-dot {
+  width: 10px;
+  height: 10px;
+  margin: 4px 0 0 2px;
+  border-radius: 50%;
+  background: var(--bg-4);
+  border: 2px solid var(--border-2);
+  position: relative;
+  z-index: 1;
+}
+
+.help-flow li.on {
+  color: var(--text);
+}
+
+.help-flow li.on .help-flow-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.help-flow li.on .help-flow-name {
+  font-weight: 600;
+}
+
+.help-flow-desc {
+  grid-column: 2;
+  font-size: 11.5px;
+  color: var(--text-2);
+  padding-bottom: 4px;
+}
+
+.help-hex {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  word-break: break-all;
+  font-size: 11.5px;
+}
+
+.help-decoded {
+  color: var(--sw);
+  font-weight: 500;
+}
+
+.help-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11.5px;
+}
+
+.help-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.help-table td:first-child {
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+.help-table tr.on td {
+  color: var(--text);
+  background: var(--accent-bg);
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.help-chip {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tag);
+  background: var(--tag-bg);
+  border-radius: 4px;
+  padding: 0 5px;
+  margin: 0 3px 3px 0;
+}
+
 /* ---------- Export documentation ---------- */
 
 .modal.export-modal {

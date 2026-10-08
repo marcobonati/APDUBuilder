@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import AddTagMenu from './components/AddTagMenu'
 import ExportDocDialog from './components/ExportDocDialog'
+import HelpPanel from './components/HelpPanel'
 import ImportDialog from './components/ImportDialog'
 import NodeCard from './components/NodeCard'
 import RawPanel from './components/RawPanel'
@@ -13,7 +14,7 @@ import type { Issue } from './emv/validate'
 import { initialLang, setLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { EditorContext } from './state/context'
-import type { EditorCtx } from './state/context'
+import type { EditorCtx, HelpTarget } from './state/context'
 import { baseName, parseProject, serializeProject } from './state/projectFile'
 import { notifyDirty, openProjectFile, saveProjectFile } from './state/projectIO'
 import {
@@ -47,6 +48,18 @@ function init(): State {
   }
 }
 
+const HELP_KEY = 'emv-apdu-builder:help-open'
+/** Delay before the help follows the pointer, so crossing other tags does not flicker. */
+const HELP_DELAY = 120
+
+function initialHelpOpen(): boolean {
+  try {
+    return localStorage.getItem(HELP_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
 interface Toast {
   text: string
   kind: 'ok' | 'error'
@@ -60,7 +73,39 @@ function App(): React.JSX.Element {
     return l
   })
   const [state, dispatch] = useReducer(reducer, undefined, init)
-  const [hovered, setHovered] = useState<string | null>(null)
+  const [hovered, setHoveredState] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(initialHelpOpen)
+  const [helpLocked, setHelpLocked] = useState(false)
+  const [helpTarget, setHelpTarget] = useState<HelpTarget | null>(null)
+  const helpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const helpLockedRef = useRef(helpLocked)
+  useEffect(() => {
+    helpLockedRef.current = helpLocked
+  }, [helpLocked])
+
+  // Every hover source (tree, RAW bytes, issue list) also drives the help panel.
+  const showHelp = useCallback((target: HelpTarget) => {
+    if (helpLockedRef.current) return
+    if (helpTimer.current) clearTimeout(helpTimer.current)
+    helpTimer.current = setTimeout(() => setHelpTarget(target), HELP_DELAY)
+  }, [])
+  const setHovered = useCallback(
+    (id: string | null) => {
+      setHoveredState(id)
+      if (id) showHelp({ tag: '', nodeId: id })
+    },
+    [showHelp]
+  )
+  const toggleHelp = useCallback(() => {
+    setHelpOpen((open) => {
+      try {
+        localStorage.setItem(HELP_KEY, open ? '0' : '1')
+      } catch {
+        // Only a preference.
+      }
+      return !open
+    })
+  }, [])
   const [selected, setSelected] = useState<string | null>(null)
   const [scrollTarget, setScrollTarget] = useState<{ id: string; n: number } | null>(null)
   const [importing, setImporting] = useState(false)
@@ -158,14 +203,19 @@ function App(): React.JSX.Element {
 
   // Latest commands for the global key handler, registered once.
   const exportDoc = useCallback(() => setExporting(true), [])
-  const commands = useRef({ save, open, createNew, exportDoc })
+  const commands = useRef({ save, open, createNew, exportDoc, toggleHelp })
   useEffect(() => {
-    commands.current = { save, open, createNew, exportDoc }
-  }, [save, open, createNew, exportDoc])
+    commands.current = { save, open, createNew, exportDoc, toggleHelp }
+  }, [save, open, createNew, exportDoc, toggleHelp])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const mod = e.metaKey || e.ctrlKey
+      if (e.key === 'F1' || (mod && e.key === '/')) {
+        e.preventDefault()
+        commands.current.toggleHelp()
+        return
+      }
       if (!mod) return
       const key = e.key.toLowerCase()
       if (key === 's') {
@@ -215,9 +265,10 @@ function App(): React.JSX.Element {
       scrollTarget,
       reveal,
       issuesByNode,
-      lang
+      lang,
+      showHelp
     }),
-    [hovered, selected, scrollTarget, reveal, issuesByNode, lang]
+    [hovered, setHovered, selected, scrollTarget, reveal, issuesByNode, lang, showHelp]
   )
 
   const template = TEMPLATES.find((tpl) => tpl.id === active.templateId)
@@ -225,7 +276,7 @@ function App(): React.JSX.Element {
 
   return (
     <EditorContext.Provider value={ctx}>
-      <div className="app">
+      <div className={`app ${helpOpen ? 'with-help' : ''}`}>
         <Sidebar
           project={state.project}
           filePath={state.filePath}
@@ -283,6 +334,13 @@ function App(): React.JSX.Element {
                 </span>
               </div>
               <div className="toolbar-buttons">
+                <button
+                  className={`btn small ${helpOpen ? 'primary' : ''}`}
+                  onClick={toggleHelp}
+                  title={`${t('Mostra o nascondi la guida in linea')} (F1)`}
+                >
+                  ? {t('Guida')}
+                </button>
                 <button
                   className="btn small"
                   onClick={() => dispatch({ type: 'fillExamples' })}
@@ -355,6 +413,16 @@ function App(): React.JSX.Element {
         </main>
 
         <RawPanel nodes={active.nodes} encoded={encoded} sw={active.sw} issues={issues} />
+
+        {helpOpen && (
+          <HelpPanel
+            target={helpTarget}
+            nodes={active.nodes}
+            locked={helpLocked}
+            onToggleLock={() => setHelpLocked((l) => !l)}
+            onClose={toggleHelp}
+          />
+        )}
       </div>
 
       {importing && (

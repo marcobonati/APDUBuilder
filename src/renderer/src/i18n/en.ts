@@ -642,7 +642,509 @@ export const EN: Record<string, string> = {
   Campi: 'Fields',
   'Significato e descrizione': 'Meaning and description',
   Significato: 'Meaning',
-  'campo obbligatorio nel template': 'mandatory field in the template'
+  'campo obbligatorio nel template': 'mandatory field in the template',
+  'Binario: sequenza di byte libera, mostrata in esadecimale.':
+    'Binary: free byte sequence, shown in hexadecimal.',
+  'Numerico BCD: due cifre per byte, allineato a destra con zeri iniziali.':
+    'BCD numeric: two digits per byte, right aligned with leading zeros.',
+  'Numerico compresso: cifre BCD allineate a sinistra, completate con F a destra.':
+    'Compressed numeric: BCD digits left aligned, padded with F on the right.',
+  'Alfanumerico: lettere e cifre codificate in ASCII / ISO 8859.':
+    'Alphanumeric: letters and digits encoded in ASCII / ISO 8859.',
+  'Alfanumerico con caratteri speciali: testo stampabile in ASCII / ISO 8859.':
+    'Alphanumeric special: printable text in ASCII / ISO 8859.',
+  'Data numerica YYMMDD in BCD (3 byte).': 'Numeric date YYMMDD in BCD (3 bytes).',
+  'Data Object List: sequenza di coppie tag + lunghezza (1 byte), senza valori.':
+    'Data Object List: sequence of tag + length (1 byte) pairs, without values.',
+  'Application File Locator: gruppi di 4 byte (SFI, primo record, ultimo record, record ODA).':
+    'Application File Locator: 4-byte groups (SFI, first record, last record, ODA records).',
+  'CVM List: importo X (4 byte), importo Y (4 byte) e regole CVM di 2 byte.':
+    'CVM List: amount X (4 bytes), amount Y (4 bytes) and 2-byte CVM rules.',
+  'Track 2 in BCD: PAN, separatore D, scadenza YYMM, service code, dati discrezionali, padding F.':
+    'Track 2 in BCD: PAN, D separator, expiry YYMM, service code, discretionary data, F padding.',
+  'Sequenza di codici lingua ISO 639-1 in ASCII, 2 caratteri ciascuno.':
+    'Sequence of ISO 639-1 language codes in ASCII, 2 characters each.',
+  'Business Identifier Code ISO 9362 in ASCII (8 o 11 caratteri).':
+    'ISO 9362 Business Identifier Code in ASCII (8 or 11 characters).',
+  Universale: 'Universal',
+  Applicazione: 'Application',
+  'Specifica di contesto': 'Context-specific',
+  Privata: 'Private',
+  'Mostra o nascondi la guida in linea': 'Show or hide the online help',
+  Guida: 'Help',
+  'SFI {sfi}: record da {first} a {last}, {oda} per ODA':
+    'SFI {sfi}: records {first} to {last}, {oda} for ODA',
+  'se fallisce prova la successiva': 'if unsuccessful try the next one',
+  'Guida in linea': 'Online help',
+  'Sblocca: segui il puntatore': 'Unlock: follow the pointer',
+  'Blocca su questo tag': 'Lock on this tag',
+  'Chiudi guida': 'Close help',
+  'Passa il mouse su un tag, su un byte della risposta RAW o su una voce di un DOL per vederne qui la documentazione.':
+    'Hover over a tag, a byte of the RAW response or a DOL entry to see its documentation here.',
+  'Byte inviati così come sono, senza struttura TLV: è il caso ad esempio della risposta a GET CHALLENGE, che restituisce 8 byte casuali.':
+    'Bytes sent as they are, without TLV structure: for example the GET CHALLENGE response, which returns 8 random bytes.',
+  'dato del terminale': 'terminal data',
+  'dato della carta': 'card data',
+  'tag non nel dizionario': 'tag not in the dictionary',
+  costruito: 'constructed',
+  primitivo: 'primitive',
+  Utilizzo: 'Usage',
+  'Nel flusso di pagamento': 'In the payment flow',
+  'Valore corrente': 'Current value',
+  'Nessun valore inserito.': 'No value entered.',
+  '{n} elementi, {len} byte di valore': '{n} elements, {len} value bytes',
+  Formato: 'Format',
+  Lunghezza: 'Length',
+  'Tag BER': 'BER tag',
+  'classe {cls}, {kind}, numero {n}': '{cls} class, {kind}, number {n}',
+  Contesto: 'Context',
+  'Si trova in:': 'Found in:',
+  'Può contenere:': 'May contain:',
+  'Presente nei template:': 'Present in templates:',
+  Riferimenti: 'References',
+  // ---- Contextual help (generated) ----
+  'Selezione applicazione': 'Application selection',
+  "SELECT di PPSE/PSE e AID: il terminale costruisce la candidate list e sceglie l'applicazione.":
+    'SELECT of PPSE/PSE and AID: the terminal builds the candidate list and chooses the application.',
+  'Avvio (GET PROCESSING OPTIONS)': 'Initiation (GET PROCESSING OPTIONS)',
+  'Il terminale invia i dati richiesti dal PDOL; la carta risponde con AIP e AFL (e in contactless spesso con il crittogramma).':
+    'The terminal sends the data requested by the PDOL; the card answers with AIP and AFL (and in contactless often the cryptogram).',
+  'Lettura dati (READ RECORD)': 'Read application data (READ RECORD)',
+  "Lettura dei record indicati dall'AFL.": 'Reading of the records listed in the AFL.',
+  'Offline Data Authentication': 'Offline Data Authentication',
+  'Verifica di autenticità della carta con SDA, DDA, CDA o fDDA tramite certificati e firme RSA.':
+    'Card authenticity check with SDA, DDA, CDA or fDDA using certificates and RSA signatures.',
+  'Processing Restrictions': 'Processing Restrictions',
+  "Controlli di versione, date di validità e restrizioni d'uso (AUC).":
+    'Checks on version, validity dates and usage restrictions (AUC).',
+  'Verifica del titolare (CVM)': 'Cardholder verification (CVM)',
+  'Scelta ed esecuzione del metodo di verifica: PIN offline o online, firma, nessun CVM.':
+    'Choice and execution of the verification method: offline or online PIN, signature, no CVM.',
+  'Terminal Risk Management': 'Terminal Risk Management',
+  'Floor limit, selezione casuale per online e velocity checking.':
+    'Floor limit, random selection for online and velocity checking.',
+  'Terminal Action Analysis': 'Terminal Action Analysis',
+  'Confronto del TVR con IAC e TAC per decidere se rifiutare, andare online o approvare offline.':
+    'Comparison of the TVR with IACs and TACs to decide whether to decline, go online or approve offline.',
+  'Card Action Analysis (GENERATE AC)': 'Card Action Analysis (GENERATE AC)',
+  'La carta genera il crittogramma (AAC, TC o ARQC) confermando o modificando la decisione del terminale.':
+    'The card generates the cryptogram (AAC, TC or ARQC), confirming or changing the terminal decision.',
+  'Autorizzazione online': 'Online authorisation',
+  "Invio dei dati chip all'issuer, verifica dell'ARQC e risposta con ARPC.":
+    'Chip data sent to the issuer, ARQC verification and ARPC response.',
+  'Completamento e script': 'Completion and scripts',
+  'Issuer authentication, secondo GENERATE AC e issuer script.':
+    'Issuer authentication, second GENERATE AC and issuer scripts.',
+  'Contenitore principale della risposta a SELECT, sia per PPSE/PSE sia per un AID. Racchiude il DF Name (84) e il template proprietario (A5) con i dati utili alla selezione.':
+    'Outer container of the SELECT response, both for PPSE/PSE and for an AID. It wraps the DF Name (84) and the proprietary template (A5) with the data needed for selection.',
+  "È la prima struttura TLV che il terminale riceve: da qui ricava la lista delle applicazioni candidate e, dopo la SELECT dell'AID, label, priorità e PDOL.":
+    'It is the first TLV structure the terminal receives: from it the terminal builds the candidate list and, after selecting the AID, reads label, priority and PDOL.',
+  "Template proprietario dell'FCI. Contiene gli elementi che descrivono l'applicazione o l'ambiente di pagamento: label, priorità, PDOL, preferenze di lingua, code table e dati discrezionali (BF0C).":
+    'FCI proprietary template. It holds the elements describing the application or payment environment: label, priority, PDOL, language preference, code table and discretionary data (BF0C).',
+  'Analizzato durante la selezione: il PDOL eventualmente presente qui determina quali dati il terminale invierà nella successiva GET PROCESSING OPTIONS.':
+    'Parsed during selection: the PDOL found here, if any, determines which data the terminal sends in the following GET PROCESSING OPTIONS.',
+  "Dati discrezionali dell'issuer nell'FCI. Nella PPSE contactless contiene le Directory Entry (61), una per ogni applicazione supportata; nella SELECT AID può contenere Log Entry, dati proprietari o dati di circuito.":
+    'Issuer discretionary data in the FCI. In the contactless PPSE it contains the Directory Entries (61), one per supported application; in the AID SELECT it may contain Log Entry, proprietary or scheme data.',
+  'Nel flusso contactless (EMV Book B, Entry Point) il terminale legge le entry 61 in BF0C per costruire la candidate list, abbinando AID e Kernel Identifier ai kernel che supporta.':
+    'In the contactless flow (EMV Book B, Entry Point) the terminal reads the 61 entries in BF0C to build the candidate list, matching AID and Kernel Identifier against the kernels it supports.',
+  "Directory Entry: descrive una singola applicazione disponibile sulla carta con almeno l'AID (4F) e, di solito, label (50), priorità (87) e, in contactless, il Kernel Identifier (9F2A). Può ripetersi.":
+    'Directory Entry: describes one application available on the card with at least the AID (4F) and usually label (50), priority (87) and, for contactless, the Kernel Identifier (9F2A). It can be repeated.',
+  "Restituita nella PPSE (contactless) o nei record del file di directory della PSE (contact). Ogni entry diventa una candidata; il terminale poi seleziona l'AID scelto.":
+    'Returned in the PPSE (contactless) or in the PSE directory file records (contact). Each entry becomes a candidate; the terminal then selects the chosen AID.',
+  'Template che racchiude i dati di un record letto con READ RECORD: dati di traccia, PAN, date, DOL, CVM List, Issuer Action Codes, chiavi e certificati per ODA.':
+    'Template wrapping the data of a record read with READ RECORD: track data, PAN, dates, DOLs, CVM List, Issuer Action Codes, keys and certificates for ODA.',
+  "Dopo la GPO il terminale legge tutti i record indicati dall'AFL (94); ogni risposta è un template 70. I record segnati per ODA entrano nel calcolo dell'autenticazione offline.":
+    'After GPO the terminal reads all records listed in the AFL (94); each response is a 70 template. Records flagged for ODA are included in the offline authentication.',
+  "Directory Discretionary Template: dati aggiuntivi associati a una Directory Entry, definiti dall'issuer o dal circuito.":
+    'Directory Discretionary Template: additional data attached to a Directory Entry, defined by the issuer or the scheme.',
+  'Letto insieme alla Directory Entry durante la costruzione della candidate list.':
+    'Read together with the Directory Entry while building the candidate list.',
+  'Response Message Template Format 2: risposta in formato TLV, in cui ogni dato è identificato dal proprio tag. È il formato più flessibile e quello usato dalle carte moderne.':
+    'Response Message Template Format 2: TLV response where every data element is identified by its tag. It is the most flexible format and the one used by modern cards.',
+  'Usato nelle risposte a GET PROCESSING OPTIONS, GENERATE AC e INTERNAL AUTHENTICATE. In contactless (es. Visa qVSDC) la GPO in formato 2 può già contenere crittogramma e dati di traccia.':
+    'Used in the responses to GET PROCESSING OPTIONS, GENERATE AC and INTERNAL AUTHENTICATE. In contactless (e.g. Visa qVSDC) a format 2 GPO may already contain the cryptogram and track data.',
+  'Response Message Template Format 1: i valori sono concatenati in un ordine fisso, senza tag né lunghezze interne. Per la GPO: AIP || AFL; per GENERATE AC: CID || ATC || AC || IAD.':
+    'Response Message Template Format 1: values are concatenated in a fixed order, without inner tags or lengths. For GPO: AIP || AFL; for GENERATE AC: CID || ATC || AC || IAD.',
+  "Usato soprattutto da carte contact meno recenti. Il terminale scompone il valore in base alla posizione dei campi, quindi l'ordine e le lunghezze devono essere esatti.":
+    'Mostly used by older contact cards. The terminal splits the value by field position, so order and lengths must be exact.',
+  'Application Identifier della carta: RID di 5 byte (identifica il circuito, es. A000000003 = Visa, A000000004 = Mastercard) seguito da un PIX fino a 11 byte che identifica il prodotto.':
+    'Card Application Identifier: 5-byte RID (identifies the scheme, e.g. A000000003 = Visa, A000000004 = Mastercard) followed by a PIX of up to 11 bytes identifying the product.',
+  "Il terminale confronta l'AID con la propria lista di AID supportati (matching esatto o parziale) per decidere quali applicazioni sono candidate, poi lo usa nel comando SELECT.":
+    'The terminal compares the AID with its list of supported AIDs (exact or partial match) to decide which applications are candidates, then uses it in the SELECT command.',
+  "Nome del Dedicated File selezionato: '2PAY.SYS.DDF01' per la PPSE contactless, '1PAY.SYS.DDF01' per la PSE contact, oppure l'AID dell'applicazione.":
+    "Name of the selected Dedicated File: '2PAY.SYS.DDF01' for the contactless PPSE, '1PAY.SYS.DDF01' for the contact PSE, or the application AID.",
+  "Conferma al terminale quale DF è stato selezionato. Dopo la SELECT dell'AID deve coincidere (o iniziare) con l'AID richiesto.":
+    'Confirms to the terminal which DF was selected. After the AID SELECT it must match (or start with) the requested AID.',
+  "Nome mnemonico dell'applicazione (es. 'VISA CREDIT'), in caratteri ans della ISO 8859 di base, massimo 16 caratteri.":
+    "Mnemonic name of the application (e.g. 'VISA CREDIT'), in basic ISO 8859 ans characters, up to 16 characters.",
+  "Mostrato al titolare quando deve scegliere tra più applicazioni o confermarne una; il terminale lo usa se non può visualizzare l'Application Preferred Name (9F12).":
+    'Shown to the cardholder when choosing between applications or confirming one; the terminal uses it when it cannot display the Application Preferred Name (9F12).',
+  "Nome preferito dell'applicazione, codificato con la parte della ISO 8859 indicata da 9F11 (permette caratteri nazionali).":
+    'Preferred application name, encoded with the ISO 8859 part indicated by 9F11 (allows national characters).',
+  'Se il terminale supporta la code table indicata, mostra questo nome al posto della Application Label durante la selezione.':
+    'If the terminal supports the indicated code table, it displays this name instead of the Application Label during selection.',
+  "Application Priority Indicator: i bit b4-b1 indicano la priorità (1 = massima, 0 = nessuna), il bit b8 indica se l'applicazione può essere selezionata solo con conferma del titolare.":
+    'Application Priority Indicator: bits b4-b1 give the priority (1 = highest, 0 = none), bit b8 indicates whether the application can be selected only with cardholder confirmation.',
+  'Il terminale ordina la candidate list in base a questa priorità; con selezione automatica sceglie la priorità più alta che non richiede conferma.':
+    'The terminal sorts the candidate list by this priority; with automatic selection it picks the highest priority that does not require confirmation.',
+  "Short File Identifier dell'Elementary File di directory della PSE (contact), valori 1-30.":
+    'Short File Identifier of the PSE directory Elementary File (contact), values 1-30.',
+  'Dopo la SELECT della PSE il terminale legge i record di questo SFI con READ RECORD per ottenere le Directory Entry delle applicazioni.':
+    'After selecting the PSE the terminal reads the records of this SFI with READ RECORD to get the application Directory Entries.',
+  'Da 1 a 4 codici lingua ISO 639-1 (minuscoli, 2 caratteri ciascuno) in ordine di preferenza del titolare.':
+    "One to four ISO 639-1 language codes (lowercase, 2 characters each) in the cardholder's order of preference.",
+  "Il terminale sceglie la prima lingua supportata per i messaggi al titolare (es. 'Inserire PIN', 'Approvato'); se nessuna è supportata usa la lingua di default.":
+    "The terminal picks the first supported language for cardholder messages (e.g. 'Enter PIN', 'Approved'); if none is supported it uses its default language.",
+  "Indica quale parte della ISO/IEC 8859 (1-10) è usata per codificare l'Application Preferred Name (9F12).":
+    'Indicates which part of ISO/IEC 8859 (1-10) is used to encode the Application Preferred Name (9F12).',
+  'Il terminale lo usa per decidere se è in grado di mostrare 9F12; obbligatorio quando 9F12 è presente.':
+    'The terminal uses it to decide whether it can display 9F12; mandatory when 9F12 is present.',
+  'Processing Options Data Object List: lista di coppie tag + lunghezza che descrive i dati del terminale richiesti dalla carta nella GPO (es. TTQ 9F66, importo 9F02, Unpredictable Number 9F37).':
+    'Processing Options Data Object List: list of tag + length pairs describing the terminal data the card requires in the GPO (e.g. TTQ 9F66, amount 9F02, Unpredictable Number 9F37).',
+  "Restituito nella SELECT AID. Il terminale concatena i valori richiesti, nell'ordine e con le lunghezze indicate, nel campo 83 della GET PROCESSING OPTIONS. Senza PDOL invia 8300.":
+    'Returned in the AID SELECT. The terminal concatenates the requested values, in the given order and lengths, into field 83 of GET PROCESSING OPTIONS. Without a PDOL it sends 8300.',
+  "Kernel Identifier: indica quale kernel contactless del terminale deve processare l'applicazione (es. 02 Mastercard, 03 Visa, 04 Amex, 2E CPACE).":
+    'Kernel Identifier: indicates which contactless kernel of the terminal must process the application (e.g. 02 Mastercard, 03 Visa, 04 Amex, 2E CPACE).',
+  "Usato dall'Entry Point durante la costruzione della candidate list: una combinazione AID + kernel è candidata solo se il terminale supporta quel kernel per quell'AID.":
+    'Used by the Entry Point while building the candidate list: an AID + kernel combination is a candidate only if the terminal supports that kernel for that AID.',
+  'Application Selection Registered Proprietary Data: dati proprietari registrati presso EMVCo che possono influenzare la selezione (es. programmi domestici).':
+    'Application Selection Registered Proprietary Data: proprietary data registered with EMVCo that can influence selection (e.g. domestic programmes).',
+  'Il terminale può usarli per escludere o preferire applicazioni secondo regole locali.':
+    'The terminal may use them to exclude or prefer applications according to local rules.',
+  "Issuer Identification Number: le prime cifre del PAN (BIN/IIN) che identificano l'issuer.":
+    'Issuer Identification Number: the leading digits of the PAN (BIN/IIN) identifying the issuer.',
+  'Può essere usato dal terminale per instradamento o selezione prima di leggere il PAN completo.':
+    'May be used by the terminal for routing or selection before reading the full PAN.',
+  'Log Entry: SFI del file di log transazioni (1 byte) e numero massimo di record (1 byte).':
+    'Log Entry: SFI of the transaction log file (1 byte) and maximum number of records (1 byte).',
+  'Non usato nel flusso di pagamento: serve a terminali o applicazioni che leggono lo storico transazioni con READ RECORD, interpretando i record con il Log Format (9F4F).':
+    'Not used in the payment flow: it serves terminals or applications that read the transaction history with READ RECORD, interpreting records with the Log Format (9F4F).',
+  "Application Program Identifier (Visa): identifica il programma o prodotto associato all'applicazione.":
+    'Application Program Identifier (Visa): identifies the programme or product associated with the application.',
+  'Può essere usato dal terminale per applicare parametri specifici del programma (es. limiti dinamici).':
+    'May be used by the terminal to apply programme-specific parameters (e.g. dynamic limits).',
+  "URL dell'issuer, in caratteri ans.": 'Issuer URL, in ans characters.',
+  'Informativo; non influenza il flusso di pagamento.':
+    'Informational; it does not affect the payment flow.',
+  'IBAN del conto associato alla carta.': 'IBAN of the account linked to the card.',
+  'Usato in schemi domestici o per servizi a valore aggiunto (es. addebito diretto); non influenza la transazione EMV.':
+    'Used by domestic schemes or value-added services (e.g. direct debit); it does not affect the EMV transaction.',
+  'Business Identifier Code della banca: 4 lettere per la banca, 2 per il paese, 2 caratteri per la località, 3 opzionali per la filiale.':
+    'Bank Business Identifier Code: 4 letters for the bank, 2 for the country, 2 characters for the location, 3 optional for the branch.',
+  "Usato insieme all'IBAN in schemi domestici; non influenza la transazione EMV.":
+    'Used together with the IBAN by domestic schemes; it does not affect the EMV transaction.',
+  "Paese dell'issuer in formato ISO 3166-1 alpha-2 (es. 'IT').":
+    "Issuer country as ISO 3166-1 alpha-2 (e.g. 'IT').",
+  'Può essere usato in selezione per regole domestiche o di routing.':
+    'May be used during selection for domestic or routing rules.',
+  "Paese dell'issuer in formato ISO 3166-1 alpha-3 (es. 'ITA').":
+    "Issuer country as ISO 3166-1 alpha-3 (e.g. 'ITA').",
+  'Application Interchange Profile: indica le funzioni supportate dalla carta: SDA, DDA, CDA, verifica del titolare, terminal risk management obbligatorio, issuer authentication e, in contactless, CVM sul dispositivo e relay resistance.':
+    'Application Interchange Profile: indicates the functions supported by the card: SDA, DDA, CDA, cardholder verification, mandatory terminal risk management, issuer authentication and, for contactless, on-device CVM and relay resistance.',
+  "Restituito nella GPO. Guida il resto della transazione: il metodo ODA scelto dal terminale, l'esecuzione della CVM e del risk management. È sempre incluso nei dati autenticati staticamente.":
+    'Returned in the GPO. It drives the rest of the transaction: the ODA method chosen by the terminal, CVM processing and risk management. It is always included in the statically authenticated data.',
+  "Application File Locator: gruppi di 4 byte che indicano SFI, primo e ultimo record da leggere e quanti di questi record entrano nell'Offline Data Authentication.":
+    'Application File Locator: groups of 4 bytes giving SFI, first and last record to read and how many of those records are part of Offline Data Authentication.',
+  'Restituito nella GPO. Il terminale esegue una READ RECORD per ogni record indicato (P2 = SFI<<3 | 4) e accumula i record ODA per la verifica della firma.':
+    'Returned in the GPO. The terminal issues a READ RECORD for each listed record (P2 = SFI<<3 | 4) and accumulates the ODA records for signature verification.',
+  "Track 2 Equivalent Data: PAN, separatore 'D', scadenza YYMM, service code e dati discrezionali, in formato BCD con padding F.":
+    "Track 2 Equivalent Data: PAN, 'D' separator, expiry YYMM, service code and discretionary data, in BCD with F padding.",
+  "Letto nei record o restituito direttamente nella GPO contactless. Viene inviato all'acquirer nel messaggio di autorizzazione (campo 35 ISO 8583) e deve essere coerente con PAN (5A) e scadenza (5F24).":
+    'Read from the records or returned directly in the contactless GPO. It is sent to the acquirer in the authorisation message (ISO 8583 field 35) and must be consistent with PAN (5A) and expiry (5F24).',
+  'Primary Account Number della carta, numerico compresso fino a 19 cifre con padding F; deve superare il controllo Luhn.':
+    'Card Primary Account Number, compressed numeric up to 19 digits with F padding; it must pass the Luhn check.',
+  'Letto nei record. Usato per la exception file check del terminale, per il messaggio di autorizzazione e, nei certificati ODA, viene confrontato con il PAN certificato.':
+    'Read from the records. Used for the terminal exception file check, for the authorisation message and, in ODA certificates, compared with the certified PAN.',
+  "Nome del titolare (2-26 caratteri), tipicamente 'COGNOME/NOME'.":
+    "Cardholder name (2-26 characters), typically 'SURNAME/NAME'.",
+  'Informativo: può essere stampato sullo scontrino. Per privacy molte carte contactless lo omettono o lo valorizzano con un testo generico.':
+    'Informational: it may be printed on the receipt. For privacy many contactless cards omit it or set a generic text.',
+  'Nome esteso del titolare (27-45 caratteri), usato quando il nome non entra in 5F20.':
+    'Extended cardholder name (27-45 characters), used when the name does not fit in 5F20.',
+  'Informativo, come 5F20.': 'Informational, like 5F20.',
+  "Data di scadenza dell'applicazione in formato YYMMDD.":
+    'Application expiration date in YYMMDD format.',
+  "Nelle Processing Restrictions il terminale la confronta con la data della transazione: se è passata imposta il bit TVR 'Applicazione scaduta'. In contactless Visa il CTQ può chiedere di andare online.":
+    "During Processing Restrictions the terminal compares it with the transaction date: if it has passed it sets the TVR bit 'Expired application'. In Visa contactless the CTQ may request going online.",
+  "Data di inizio validità dell'applicazione in formato YYMMDD.":
+    'Application effective date in YYMMDD format.',
+  "Nelle Processing Restrictions, se la data della transazione è precedente, il terminale imposta il bit TVR 'Applicazione non ancora valida'.":
+    "During Processing Restrictions, if the transaction date is earlier, the terminal sets the TVR bit 'Application not yet effective'.",
+  "Paese dell'issuer, codice numerico ISO 3166-1 (es. 0380 = Italia).":
+    'Issuer country, ISO 3166-1 numeric code (e.g. 0380 = Italy).',
+  "Confrontato con il Terminal Country Code (9F1A) per stabilire se la transazione è domestica o internazionale, e quindi quali bit dell'AUC (9F07) applicare.":
+    'Compared with the Terminal Country Code (9F1A) to decide whether the transaction is domestic or international, and therefore which AUC (9F07) bits apply.',
+  'Service code a 3 cifre (es. 201): la prima indica interchange e presenza del chip, la seconda le regole di autorizzazione, la terza i servizi consentiti e i requisiti PIN.':
+    '3-digit service code (e.g. 201): the first digit indicates interchange and chip presence, the second authorisation rules, the third allowed services and PIN requirements.',
+  'Usato soprattutto in fallback a banda magnetica; un primo digit 2 o 6 indica che la carta ha il chip.':
+    'Mostly used in magnetic stripe fallback; a first digit of 2 or 6 indicates the card has a chip.',
+  'PAN Sequence Number: distingue carte diverse emesse con lo stesso PAN (es. rinnovi o carte aggiuntive).':
+    'PAN Sequence Number: distinguishes different cards issued with the same PAN (e.g. renewals or additional cards).',
+  "Inviato all'issuer nel messaggio di autorizzazione (campo 23 ISO 8583) ed è spesso un input per la derivazione delle chiavi della carta.":
+    'Sent to the issuer in the authorisation message (ISO 8583 field 23) and often an input to card key derivation.',
+  'CDOL1: lista tag + lunghezza dei dati del terminale richiesti nel primo GENERATE AC (importo, valuta, data, TVR, Unpredictable Number, ecc.).':
+    'CDOL1: tag + length list of the terminal data required in the first GENERATE AC (amount, currency, date, TVR, Unpredictable Number, etc.).',
+  'Letto nei record. Il terminale costruisce il campo dati del primo GENERATE AC concatenando i valori richiesti; la carta li usa per il crittogramma e per il Card Risk Management.':
+    'Read from the records. The terminal builds the data field of the first GENERATE AC by concatenating the requested values; the card uses them for the cryptogram and Card Risk Management.',
+  'CDOL2: dati richiesti nel secondo GENERATE AC, tipicamente Authorisation Response Code (8A), Issuer Authentication Data (91), TVR e Unpredictable Number.':
+    'CDOL2: data required in the second GENERATE AC, typically Authorisation Response Code (8A), Issuer Authentication Data (91), TVR and Unpredictable Number.',
+  "Usato dopo la risposta online dell'issuer: il terminale invia l'esito dell'autorizzazione e la carta decide se generare TC (approvata) o AAC (rifiutata).":
+    "Used after the issuer's online response: the terminal sends the authorisation outcome and the card decides whether to generate a TC (approved) or AAC (declined).",
+  'CVM List: importi X e Y (4 byte ciascuno) seguiti da regole di 2 byte (metodo CVM + condizione) in ordine di priorità. Il bit b7 del primo byte indica se, in caso di fallimento, provare la regola successiva.':
+    'CVM List: amounts X and Y (4 bytes each) followed by 2-byte rules (CVM method + condition) in order of priority. Bit b7 of the first byte indicates whether to try the next rule on failure.',
+  "Nella fase di Cardholder Verification il terminale scorre le regole: la prima la cui condizione è soddisfatta e il cui metodo è supportato viene eseguita (PIN offline, PIN online, firma, nessun CVM). L'esito finisce nei CVM Results (9F34).":
+    'In the Cardholder Verification step the terminal walks the rules: the first whose condition is met and whose method is supported is performed (offline PIN, online PIN, signature, no CVM). The outcome goes into the CVM Results (9F34).',
+  'Transaction Certificate DOL: dati usati per calcolare il TC Hash Value (98).':
+    'Transaction Certificate DOL: data used to compute the TC Hash Value (98).',
+  'Se CDOL1/CDOL2 richiedono il TC Hash Value, il terminale lo calcola come SHA-1 dei dati indicati dal TDOL (o da un TDOL di default, impostando il relativo bit TVR).':
+    'If CDOL1/CDOL2 request the TC Hash Value, the terminal computes it as the SHA-1 of the data listed in the TDOL (or a default TDOL, setting the related TVR bit).',
+  "Dynamic Data Authentication DOL: dati inviati nella INTERNAL AUTHENTICATE per la DDA; deve contenere almeno l'Unpredictable Number (9F37).":
+    'Dynamic Data Authentication DOL: data sent in INTERNAL AUTHENTICATE for DDA; it must contain at least the Unpredictable Number (9F37).',
+  'Con DDA il terminale invia questi dati, la carta li firma con la propria chiave privata e restituisce la SDAD (9F4B), che il terminale verifica con la chiave pubblica ICC recuperata dai certificati.':
+    'With DDA the terminal sends these data, the card signs them with its private key and returns the SDAD (9F4B), which the terminal verifies with the ICC public key recovered from the certificates.',
+  "Application Usage Control: restrizioni d'uso definite dall'issuer: cash, beni, servizi, cashback, ATM, distinguendo tra transazioni domestiche e internazionali.":
+    'Application Usage Control: usage restrictions defined by the issuer: cash, goods, services, cashback, ATM, distinguishing domestic and international transactions.',
+  "Nelle Processing Restrictions il terminale verifica che il tipo di transazione e la sua natura (domestica se 5F28 = 9F1A) siano consentiti; altrimenti imposta il bit TVR 'Servizio richiesto non consentito'.":
+    "During Processing Restrictions the terminal checks that the transaction type and its nature (domestic when 5F28 = 9F1A) are allowed; otherwise it sets the TVR bit 'Requested service not allowed'.",
+  "Versione dell'applicazione assegnata dal payment system alla carta.":
+    'Application version assigned to the card by the payment system.',
+  "Confrontata con la versione del terminale (9F09): se diversa il terminale imposta il bit TVR 'ICC e terminale hanno versioni applicazione diverse'.":
+    "Compared with the terminal version (9F09): if different the terminal sets the TVR bit 'ICC and terminal have different application versions'.",
+  'Issuer Action Code - Default: maschera con lo stesso layout del TVR. Indica le condizioni per cui la transazione va rifiutata se il terminale non riesce ad andare online.':
+    'Issuer Action Code - Default: mask with the same layout as the TVR. It lists the conditions for which the transaction must be declined if the terminal cannot go online.',
+  'Nella Terminal Action Analysis, se la transazione non può essere autorizzata online, il terminale confronta TVR con IAC-Default e TAC-Default: un bit in comune porta a richiedere un AAC.':
+    'In Terminal Action Analysis, if the transaction cannot be authorised online, the terminal compares the TVR with IAC-Default and TAC-Default: a common bit leads to requesting an AAC.',
+  "Issuer Action Code - Denial: condizioni TVR per cui la transazione deve essere rifiutata offline senza tentare l'autorizzazione online.":
+    'Issuer Action Code - Denial: TVR conditions for which the transaction must be declined offline without attempting online authorisation.',
+  'È la prima verifica della Terminal Action Analysis: se un bit del TVR coincide con IAC-Denial o TAC-Denial il terminale chiede un AAC nel primo GENERATE AC.':
+    'It is the first check of Terminal Action Analysis: if a TVR bit matches IAC-Denial or TAC-Denial the terminal requests an AAC in the first GENERATE AC.',
+  'Issuer Action Code - Online: condizioni TVR per cui la transazione deve essere autorizzata online.':
+    'Issuer Action Code - Online: TVR conditions for which the transaction must be authorised online.',
+  'Se il terminale è online-capable e un bit del TVR coincide con IAC-Online o TAC-Online, chiede un ARQC; altrimenti può chiedere un TC per approvare offline.':
+    'If the terminal is online capable and a TVR bit matches IAC-Online or TAC-Online, it requests an ARQC; otherwise it may request a TC to approve offline.',
+  "Lower Consecutive Offline Limit: numero di transazioni offline consecutive oltre il quale l'issuer vuole che il terminale vada online.":
+    'Lower Consecutive Offline Limit: number of consecutive offline transactions beyond which the issuer wants the terminal to go online.',
+  'Nel velocity checking del Terminal Risk Management il terminale confronta ATC - Last Online ATC con questo limite e, se superato, imposta il relativo bit TVR.':
+    'In the velocity checking of Terminal Risk Management the terminal compares ATC - Last Online ATC with this limit and, if exceeded, sets the related TVR bit.',
+  'Upper Consecutive Offline Limit: numero di transazioni offline consecutive oltre il quale, se non si può andare online, la transazione va rifiutata.':
+    'Upper Consecutive Offline Limit: number of consecutive offline transactions beyond which, if online is not possible, the transaction must be declined.',
+  "Usato nel velocity checking insieme a 9F14, 9F36 e 9F13; il superamento imposta il bit TVR 'Upper consecutive offline limit superato'.":
+    "Used in velocity checking together with 9F14, 9F36 and 9F13; exceeding it sets the TVR bit 'Upper consecutive offline limit exceeded'.",
+  "Track 1 Discretionary Data: dati discrezionali della traccia 1 definiti dall'issuer.":
+    'Track 1 Discretionary Data: issuer-defined discretionary data of track 1.',
+  "Può essere inviato all'issuer nel messaggio di autorizzazione.":
+    'May be sent to the issuer in the authorisation message.',
+  'Track 2 Discretionary Data: dati discrezionali della traccia 2.':
+    'Track 2 Discretionary Data: discretionary data of track 2.',
+  'Track 1 Data (Mastercard): immagine della traccia 1 usata in mag-stripe mode contactless.':
+    'Track 1 Data (Mastercard): image of track 1 used in contactless mag-stripe mode.',
+  "In mag-stripe mode il kernel aggiorna i dati dinamici (CVC3, UN, ATC) e li invia all'acquirer al posto dei dati chip.":
+    'In mag-stripe mode the kernel updates the dynamic data (CVC3, UN, ATC) and sends them to the acquirer instead of chip data.',
+  'Track 2 Data (Mastercard): immagine della traccia 2 usata in mag-stripe mode contactless.':
+    'Track 2 Data (Mastercard): image of track 2 used in contactless mag-stripe mode.',
+  "Come 56: in mag-stripe mode viene completata con i dati dinamici e inviata nell'autorizzazione.":
+    'Like 56: in mag-stripe mode it is completed with dynamic data and sent in the authorisation.',
+  "Valuta dell'applicazione, codice numerico ISO 4217 (es. 0978 = EUR).":
+    'Application currency, ISO 4217 numeric code (e.g. 0978 = EUR).',
+  'Le condizioni CVM su importi X/Y (codici 06-09) si applicano solo se la valuta della transazione (5F2A) coincide con questa; usata anche nei controlli di risk management sulla carta.':
+    'CVM conditions on amounts X/Y (codes 06-09) apply only if the transaction currency (5F2A) matches this one; also used by card risk management checks.',
+  "Application Currency Exponent: numero di cifre decimali della valuta dell'applicazione (es. 2 per EUR).":
+    'Application Currency Exponent: number of decimal digits of the application currency (e.g. 2 for EUR).',
+  "Usato per interpretare correttamente importi espressi nella valuta dell'applicazione.":
+    'Used to correctly interpret amounts expressed in the application currency.',
+  "Application Discretionary Data: dati liberi definiti dall'issuer.":
+    'Application Discretionary Data: free data defined by the issuer.',
+  'Non interpretato dal terminale nel flusso standard.':
+    'Not interpreted by the terminal in the standard flow.',
+  'Payment Account Reference: riferimento non finanziario di 29 caratteri che collega PAN e token dello stesso conto.':
+    'Payment Account Reference: 29-character non-financial reference linking PAN and tokens of the same account.',
+  "Inviato nell'autorizzazione per permettere ad acquirer ed esercenti di riconoscere il conto senza usare il PAN.":
+    'Sent in the authorisation so acquirers and merchants can recognise the account without using the PAN.',
+  'Token Requestor ID: identifica chi ha richiesto il token (es. wallet mobile).':
+    'Token Requestor ID: identifies who requested the token (e.g. a mobile wallet).',
+  "Presente nelle transazioni tokenizzate e inviato nell'autorizzazione.":
+    'Present in tokenised transactions and sent in the authorisation.',
+  'Ultime 4 cifre del PAN reale, usate con i token.':
+    'Last 4 digits of the real PAN, used with tokens.',
+  'Permette di mostrare o stampare le ultime cifre del conto quando la carta presenta un token.':
+    'Allows the last digits of the account to be displayed or printed when the card presents a token.',
+  "Indice della chiave pubblica della Certification Authority del circuito (combinato con il RID dell'AID).":
+    'Index of the scheme Certification Authority public key (combined with the AID RID).',
+  "All'inizio dell'ODA il terminale cerca la chiave CA corrispondente a RID + indice; se non la trova l'ODA fallisce e viene impostato il bit TVR relativo.":
+    'At the start of ODA the terminal looks up the CA key matching RID + index; if not found ODA fails and the related TVR bit is set.',
+  "Certificato della chiave pubblica dell'issuer, firmato dalla CA; la lunghezza è pari al modulo della chiave CA.":
+    'Issuer public key certificate, signed by the CA; its length equals the CA key modulus.',
+  "Il terminale lo verifica con la chiave CA (8F) per recuperare la chiave pubblica dell'issuer, necessaria per verificare SDA o il certificato ICC.":
+    'The terminal verifies it with the CA key (8F) to recover the issuer public key, needed to verify SDA or the ICC certificate.',
+  "Parte del modulo della chiave pubblica dell'issuer che non entra nel certificato 90.":
+    'Part of the issuer public key modulus that does not fit in certificate 90.',
+  'Concatenato con la parte recuperata dal certificato per ricostruire il modulo completo.':
+    'Concatenated with the part recovered from the certificate to rebuild the full modulus.',
+  "Esponente pubblico RSA della chiave dell'issuer: 03 oppure 010001 (65537).":
+    'RSA public exponent of the issuer key: 03 or 010001 (65537).',
+  'Usato insieme al modulo recuperato per le verifiche RSA successive.':
+    'Used together with the recovered modulus for subsequent RSA verifications.',
+  "Signed Static Application Data: firma dell'issuer sui dati statici della carta, usata per SDA.":
+    'Signed Static Application Data: issuer signature over the card static data, used for SDA.',
+  "Con SDA il terminale la verifica con la chiave dell'issuer, confrontando l'hash con i record ODA e i tag della SDA Tag List (9F4A).":
+    'With SDA the terminal verifies it with the issuer key, comparing the hash with the ODA records and the tags in the SDA Tag List (9F4A).',
+  "Certificato della chiave pubblica della carta (ICC), firmato dall'issuer.":
+    'Card (ICC) public key certificate, signed by the issuer.',
+  "Per DDA/CDA il terminale lo verifica con la chiave dell'issuer e ottiene la chiave pubblica ICC, con cui verificherà la firma dinamica (9F4B).":
+    'For DDA/CDA the terminal verifies it with the issuer key and obtains the ICC public key, used to verify the dynamic signature (9F4B).',
+  'Esponente pubblico RSA della chiave ICC: 03 oppure 010001 (65537).':
+    'RSA public exponent of the ICC key: 03 or 010001 (65537).',
+  'Usato per verificare la firma dinamica.': 'Used to verify the dynamic signature.',
+  'Parte del modulo della chiave pubblica ICC che non entra nel certificato 9F46.':
+    'Part of the ICC public key modulus that does not fit in certificate 9F46.',
+  'Concatenato alla parte recuperata dal certificato per ricostruire il modulo.':
+    'Concatenated with the part recovered from the certificate to rebuild the modulus.',
+  "Static Data Authentication Tag List: tag i cui valori entrano nei dati autenticati staticamente; EMV ammette solo l'AIP (82).":
+    'Static Data Authentication Tag List: tags whose values are included in the statically authenticated data; EMV allows only the AIP (82).',
+  "Il terminale aggiunge il valore di questi tag ai record ODA prima di calcolare l'hash per SDA, DDA o CDA.":
+    'The terminal appends the value of these tags to the ODA records before computing the hash for SDA, DDA or CDA.',
+  'Signed Dynamic Application Data: firma RSA generata dalla carta su dati dinamici (Unpredictable Number, ICC Dynamic Number e, con CDA, il crittogramma).':
+    'Signed Dynamic Application Data: RSA signature generated by the card over dynamic data (Unpredictable Number, ICC Dynamic Number and, with CDA, the cryptogram).',
+  "Restituita nella INTERNAL AUTHENTICATE (DDA), nel GENERATE AC (CDA) o nella GPO contactless (fDDA). Il terminale la verifica con la chiave ICC: se fallisce imposta il bit TVR 'DDA/CDA fallita'.":
+    "Returned in INTERNAL AUTHENTICATE (DDA), in GENERATE AC (CDA) or in the contactless GPO (fDDA). The terminal verifies it with the ICC key: on failure it sets the TVR bit 'DDA/CDA failed'.",
+  'ICC Dynamic Number: numero variabile generato dalla carta a ogni transazione e incluso nella firma dinamica.':
+    'ICC Dynamic Number: variable number generated by the card for each transaction and included in the dynamic signature.',
+  'Recuperato dal terminale verificando la SDAD; può essere richiesto in CDOL per legare crittogramma e firma.':
+    'Recovered by the terminal when verifying the SDAD; it may be requested in a CDOL to bind cryptogram and signature.',
+  'Card Authentication Related Data (Visa fDDA): versione fDDA, Card Unpredictable Number e CTQ inclusi nella firma.':
+    'Card Authentication Related Data (Visa fDDA): fDDA version, Card Unpredictable Number and CTQ included in the signature.',
+  'Il reader Visa lo usa per verificare la firma fDDA restituita nella GPO, senza comandi aggiuntivi.':
+    'The Visa reader uses it to verify the fDDA signature returned in the GPO, without additional commands.',
+  'Cryptogram Information Data: i bit b8-b7 indicano il tipo di crittogramma restituito (00 AAC rifiuto, 01 TC approvazione offline, 10 ARQC richiesta online); b4 e b3-b1 gestiscono advice e motivazioni.':
+    'Cryptogram Information Data: bits b8-b7 give the type of cryptogram returned (00 AAC decline, 01 TC offline approval, 10 ARQC online request); b4 and b3-b1 handle advice and reasons.',
+  "È la decisione della carta nella Card Action Analysis: può confermare o 'abbassare' la richiesta del terminale (es. terminale chiede TC, carta risponde ARQC o AAC), mai alzarla.":
+    "It is the card's decision in Card Action Analysis: it may confirm or downgrade the terminal request (e.g. terminal asks for a TC, card answers ARQC or AAC), never upgrade it.",
+  'Application Transaction Counter: contatore incrementato dalla carta a ogni transazione.':
+    'Application Transaction Counter: counter incremented by the card on every transaction.',
+  "Input del crittogramma (protegge dai replay), usato nel velocity checking (ATC - Last Online ATC) e inviato all'issuer, che verifica la progressione.":
+    'Input to the cryptogram (protects against replay), used in velocity checking (ATC - Last Online ATC) and sent to the issuer, which checks its progression.',
+  'Application Cryptogram: MAC di 8 byte calcolato dalla carta con una chiave di sessione su dati di transazione e carta (importo, valuta, data, UN, ATC, ...).':
+    'Application Cryptogram: 8-byte MAC computed by the card with a session key over transaction and card data (amount, currency, date, UN, ATC, ...).',
+  "Un ARQC viene verificato online dall'issuer, che risponde con un ARPC; un TC o un AAC viene conservato come prova della transazione approvata o rifiutata.":
+    'An ARQC is verified online by the issuer, which answers with an ARPC; a TC or AAC is kept as evidence of the approved or declined transaction.',
+  "Issuer Application Data: dati proprietari dell'issuer (es. Cryptogram Version Number, Derivation Key Index, Card Verification Results) con formato dipendente dal circuito.":
+    'Issuer Application Data: issuer proprietary data (e.g. Cryptogram Version Number, Derivation Key Index, Card Verification Results) in a scheme-dependent format.',
+  "Restituito con il crittogramma e inviato all'issuer, che lo usa per sapere come verificare l'ARQC e quali controlli ha eseguito la carta.":
+    'Returned with the cryptogram and sent to the issuer, which uses it to know how to verify the ARQC and which checks the card performed.',
+  "Last Online ATC Register: valore dell'ATC all'ultima transazione autorizzata online.":
+    'Last Online ATC Register: ATC value at the last online authorised transaction.',
+  "Letto con GET DATA durante il velocity checking: se vale 0 il terminale imposta il bit TVR 'Nuova carta'.":
+    "Read with GET DATA during velocity checking: if it is 0 the terminal sets the TVR bit 'New card'.",
+  'PIN Try Counter: numero di tentativi PIN offline rimanenti.':
+    'PIN Try Counter: number of remaining offline PIN tries.',
+  "Letto con GET DATA prima della verifica PIN offline: se vale 0 il PIN è bloccato e il terminale imposta il bit TVR 'PIN Try Limit superato'.":
+    "Read with GET DATA before offline PIN verification: if it is 0 the PIN is blocked and the terminal sets the TVR bit 'PIN Try Limit exceeded'.",
+  'Log Format: DOL che descrive il contenuto dei record del log transazioni.':
+    'Log Format: DOL describing the content of the transaction log records.',
+  'Letto con GET DATA da applicazioni che consultano lo storico; non fa parte del flusso di pagamento.':
+    'Read with GET DATA by applications browsing the history; not part of the payment flow.',
+  "Data Authentication Code: codice di 2 byte inserito dall'issuer nei dati firmati per SDA.":
+    'Data Authentication Code: 2-byte code placed by the issuer in the SDA signed data.',
+  'Recuperato verificando la SDA e, se richiesto da CDOL, inviato alla carta nel GENERATE AC.':
+    'Recovered when verifying SDA and, if requested by a CDOL, sent to the card in GENERATE AC.',
+  "Card Transaction Qualifiers (Visa): indicazioni della carta al reader contactless: CVM richiesto (PIN online, firma), comportamento se l'ODA fallisce o l'applicazione è scaduta, eventuale CVM eseguito sul dispositivo.":
+    'Card Transaction Qualifiers (Visa): card indications to the contactless reader: required CVM (online PIN, signature), behaviour when ODA fails or the application has expired, consumer device CVM performed.',
+  'Restituito nella GPO qVSDC. Il reader lo combina con il TTQ (9F66) per decidere CVM e se andare online o cambiare interfaccia.':
+    'Returned in the qVSDC GPO. The reader combines it with the TTQ (9F66) to decide the CVM and whether to go online or switch interface.',
+  'Visa: Form Factor Indicator (tipo di dispositivo: carta, mobile, wearable e sue caratteristiche). Mastercard: Third Party Data.':
+    'Visa: Form Factor Indicator (device type: card, mobile, wearable and its features). Mastercard: Third Party Data.',
+  "Inviato all'issuer nell'autorizzazione per analisi del rischio e reportistica.":
+    'Sent to the issuer in the authorisation for risk analysis and reporting.',
+  'Available Offline Spending Amount: importo residuo spendibile offline.':
+    'Available Offline Spending Amount: remaining amount that can be spent offline.',
+  'Il reader può mostrarlo al titolare dopo la transazione; riflette i contatori di risk management della carta.':
+    'The reader may display it to the cardholder after the transaction; it reflects the card risk management counters.',
+  "Customer Exclusive Data (Visa): dati proprietari dell'issuer trasportati verso l'host.":
+    'Customer Exclusive Data (Visa): issuer proprietary data carried to the host.',
+  'Inviato nel messaggio di autorizzazione senza essere interpretato dal terminale.':
+    'Sent in the authorisation message without being interpreted by the terminal.',
+  'Application Default Action: comportamento della carta in situazioni particolari (es. issuer authentication fallita, transazione internazionale).':
+    'Application Default Action: card behaviour in particular situations (e.g. failed issuer authentication, international transaction).',
+  'Usato internamente dalla carta nel Card Risk Management.':
+    'Used internally by the card in Card Risk Management.',
+  'Terminal Transaction Qualifiers: capacità e requisiti del reader contactless (EMV mode, online capable, CVM supportati, ODA, ecc.).':
+    'Terminal Transaction Qualifiers: capabilities and requirements of the contactless reader (EMV mode, online capable, supported CVMs, ODA, etc.).',
+  'Inviato alla carta nella GPO quando richiesto dal PDOL; la carta lo usa per scegliere il percorso (online, offline, CVM).':
+    'Sent to the card in the GPO when requested by the PDOL; the card uses it to choose the path (online, offline, CVM).',
+  'Importo autorizzato della transazione (n12, nelle unità minime della valuta).':
+    'Authorised amount of the transaction (n12, in minor currency units).',
+  'Richiesto nei DOL (PDOL, CDOL1). Usato per floor limit, condizioni CVM e incluso nel crittogramma.':
+    'Requested in DOLs (PDOL, CDOL1). Used for floor limits, CVM conditions and included in the cryptogram.',
+  "Importo 'altro', tipicamente il cashback (n12).": "'Other' amount, typically cashback (n12).",
+  'Richiesto nei DOL e incluso nel crittogramma.':
+    'Requested in DOLs and included in the cryptogram.',
+  'Paese del terminale, codice numerico ISO 3166-1.': 'Terminal country, ISO 3166-1 numeric code.',
+  'Confrontato con 5F28 per stabilire se la transazione è domestica; richiesto spesso in PDOL e CDOL1.':
+    'Compared with 5F28 to decide whether the transaction is domestic; often requested in PDOL and CDOL1.',
+  "Terminal Verification Results: 5 byte in cui il terminale registra l'esito di tutti i controlli (ODA, restrizioni, CVM, risk management, script).":
+    'Terminal Verification Results: 5 bytes where the terminal records the outcome of all checks (ODA, restrictions, CVM, risk management, scripts).',
+  "Confrontato con IAC/TAC nella Terminal Action Analysis, inviato alla carta in CDOL e all'issuer nell'autorizzazione.":
+    'Compared with IAC/TAC in Terminal Action Analysis, sent to the card in CDOLs and to the issuer in the authorisation.',
+  'Valuta della transazione, codice numerico ISO 4217.':
+    'Transaction currency, ISO 4217 numeric code.',
+  'Richiesto nei DOL e confrontato con 9F42 per le condizioni CVM sugli importi.':
+    'Requested in DOLs and compared with 9F42 for amount-based CVM conditions.',
+  'Data della transazione, YYMMDD.': 'Transaction date, YYMMDD.',
+  'Usata nelle Processing Restrictions (scadenza e inizio validità) e inclusa nel crittogramma.':
+    'Used in Processing Restrictions (expiry and effective date) and included in the cryptogram.',
+  'Tipo di transazione (primi 2 digit del Processing Code ISO 8583: 00 acquisto, 01 prelievo, 09 acquisto con cashback, 20 rimborso).':
+    'Transaction type (first 2 digits of the ISO 8583 Processing Code: 00 purchase, 01 cash, 09 purchase with cashback, 20 refund).',
+  'Usato per i controlli AUC e richiesto spesso nei DOL.':
+    'Used for AUC checks and often requested in DOLs.',
+  'Ora della transazione, HHMMSS.': 'Transaction time, HHMMSS.',
+  'Può essere richiesta in DOL e registrata nel log.':
+    'May be requested in DOLs and stored in the log.',
+  'Unpredictable Number: 4 byte casuali generati dal terminale.':
+    'Unpredictable Number: 4 random bytes generated by the terminal.',
+  "Garantisce l'unicità di crittogrammi e firme dinamiche: richiesto in PDOL, CDOL e DDOL.":
+    'Guarantees the uniqueness of cryptograms and dynamic signatures: requested in PDOL, CDOL and DDOL.',
+  'Terminal Type: ambiente operativo (presidiato o no, online/offline, finanziario o esercente).':
+    'Terminal Type: operating environment (attended or not, online/offline, financial institution or merchant).',
+  'Influenza condizioni CVM e decisioni della carta; richiesto in alcuni DOL.':
+    'Affects CVM conditions and card decisions; requested in some DOLs.',
+  'Terminal Capabilities: capacità del terminale (input, CVM supportati, ODA supportata).':
+    'Terminal Capabilities: terminal capabilities (input, supported CVMs, supported ODA).',
+  'Usato per scegliere il metodo ODA e le regole CVM applicabili.':
+    'Used to choose the ODA method and the applicable CVM rules.',
+  'Additional Terminal Capabilities: tipi di transazione supportati e capacità di input/output.':
+    'Additional Terminal Capabilities: supported transaction types and input/output capabilities.',
+  "Usato in alcune verifiche e inviato all'issuer.": 'Used in some checks and sent to the issuer.',
+  'CVM Results: metodo CVM eseguito, condizione ed esito.':
+    'CVM Results: CVM method performed, condition and result.',
+  "Prodotto nella fase di Cardholder Verification e inviato alla carta (CDOL) e all'issuer.":
+    'Produced in the Cardholder Verification step and sent to the card (CDOL) and to the issuer.',
+  "Versione dell'applicazione nel terminale.": 'Application version in the terminal.',
+  'Confrontata con 9F08 della carta nelle Processing Restrictions.':
+    'Compared with the card 9F08 during Processing Restrictions.',
+  'Numero di serie del dispositivo di interfaccia (IFD).': 'Interface Device (IFD) serial number.',
+  "Può essere inviato all'issuer per identificare il terminale.":
+    'May be sent to the issuer to identify the terminal.',
+  "Nome e località dell'esercente.": 'Merchant name and location.',
+  "Può essere richiesto in DOL o inviato nell'autorizzazione.":
+    'May be requested in DOLs or sent in the authorisation.',
+  'Merchant Category Code (MCC).': 'Merchant Category Code (MCC).',
+  'Usato da issuer e carta per regole specifiche per categoria merceologica.':
+    'Used by issuer and card for category-specific rules.',
+  "Identificativo dell'esercente presso l'acquirer.": 'Merchant identifier at the acquirer.',
+  'Inviato nel messaggio di autorizzazione.': 'Sent in the authorisation message.',
+  "Identificativo del terminale presso l'acquirer.": 'Terminal identifier at the acquirer.',
+  "Authorisation Response Code: esito dell'autorizzazione (es. '00' approvata) o codice generato dal terminale ('Y1', 'Z1', 'Y3', 'Z3').":
+    "Authorisation Response Code: authorisation outcome (e.g. '00' approved) or a terminal-generated code ('Y1', 'Z1', 'Y3', 'Z3').",
+  'Inviato alla carta nel secondo GENERATE AC tramite CDOL2.':
+    'Sent to the card in the second GENERATE AC through CDOL2.',
+  "Issuer Authentication Data: contiene l'ARPC calcolato dall'issuer ed eventuali dati proprietari.":
+    'Issuer Authentication Data: contains the ARPC computed by the issuer and any proprietary data.',
+  "Inviato alla carta con EXTERNAL AUTHENTICATE o nel secondo GENERATE AC (CDOL2) per l'issuer authentication.":
+    'Sent to the card with EXTERNAL AUTHENTICATE or in the second GENERATE AC (CDOL2) for issuer authentication.',
+  'TC Hash Value: hash SHA-1 dei dati indicati dal TDOL.':
+    'TC Hash Value: SHA-1 hash of the data listed in the TDOL.',
+  'Inviato alla carta se richiesto da CDOL1/CDOL2.': 'Sent to the card if requested by CDOL1/CDOL2.'
+  // ---- end contextual help ----
 }
 
 /** Strings that are the same in both languages (product names, codes, commands). */
