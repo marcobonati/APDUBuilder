@@ -1634,6 +1634,44 @@ select.input {
   gap: 2px;
 }
 
+.luhn-grid {
+  display: grid;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: center;
+}
+
+.luhn-digit,
+.luhn-value {
+  padding: 2px 0;
+  border-radius: 3px;
+  background: var(--bg);
+}
+
+.luhn-digit.doubled {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.luhn-value {
+  color: var(--text-2);
+}
+
+.luhn-value.doubled {
+  color: var(--accent);
+}
+
+.luhn-value.check {
+  outline: 1px solid var(--sw);
+}
+
+.luhn-bad {
+  color: var(--err);
+  font-weight: 500;
+}
+
 .help-chip {
   display: inline-block;
   font-family: var(--mono);

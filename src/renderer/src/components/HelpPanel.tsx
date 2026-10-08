@@ -3,6 +3,8 @@ import {
   CVM_CONDITIONS,
   CVM_METHODS,
   describeValue,
+  hexToCompressed,
+  luhn,
   parseAfl,
   parseCvm,
   parseTrack2
@@ -63,6 +65,94 @@ function templateUses(tag: string): TemplateUse[] {
     name: t(tpl.name),
     command: tpl.command.apdu ? t(tpl.command.name) : ''
   }))
+}
+
+/** Tags carrying a PAN, for which the help explains the Luhn check. */
+const LUHN_TAGS = ['5A', '57', '9F6B']
+
+function panOf(tag: string, value: string): string {
+  if (!value || !isHexBytes(value)) return ''
+  return tag === '5A' ? hexToCompressed(value) : parseTrack2(value).pan
+}
+
+/** Explanation of the Luhn check, with the computation on the current PAN. */
+function LuhnSection({ pan }: { pan: string }): React.JSX.Element {
+  const usable = /^\d{2,19}$/.test(pan)
+  const r = usable ? luhn(pan) : null
+  return (
+    <section className="help-section">
+      <h3>{t('Controllo Luhn')}</h3>
+      <p>
+        {t(
+          'Il controllo Luhn (algoritmo "mod 10", ISO/IEC 7812-1) verifica la cifra di controllo del PAN: l\'ultima cifra è scelta dall\'issuer in modo che la somma calcolata sulle cifre sia un multiplo di 10.'
+        )}
+      </p>
+      <p>
+        {t(
+          'Serve a intercettare errori di digitazione o trascrizione: rileva qualsiasi cifra singola sbagliata e quasi tutti gli scambi tra due cifre adiacenti. Non è un controllo di sicurezza: chiunque può calcolare un PAN che lo supera.'
+        )}
+      </p>
+      <ol className="help-list">
+        <li>
+          {t(
+            "Partendo dall'ultima cifra (la cifra di controllo) e procedendo verso sinistra, raddoppia una cifra sì e una no: la seconda da destra, la quarta, e così via."
+          )}
+        </li>
+        <li>
+          {t(
+            'Se un raddoppio supera 9, sottrai 9 (equivale a sommare le due cifre del risultato).'
+          )}
+        </li>
+        <li>{t('Somma tutti i valori ottenuti, compresa la cifra di controllo.')}</li>
+        <li>{t('Il PAN è valido se la somma è un multiplo di 10.')}</li>
+      </ol>
+      <p className="muted small">
+        {t(
+          'EMV non chiede al terminale di verificarlo sui dati letti dal chip, ma acquirer e sistemi di autorizzazione scartano i PAN non validi: per questo anche i PAN usati nei test devono superarlo.'
+        )}
+      </p>
+      {r && (
+        <>
+          <div className="muted small">{t('Calcolo sul PAN corrente:')}</div>
+          <div
+            className="luhn-grid"
+            style={{ gridTemplateColumns: `repeat(${r.steps.length}, 1fr)` }}
+          >
+            {r.steps.map((st, i) => (
+              <span key={`d${i}`} className={`luhn-digit ${st.doubled ? 'doubled' : ''}`}>
+                {st.digit}
+              </span>
+            ))}
+            {r.steps.map((st, i) => (
+              <span
+                key={`v${i}`}
+                className={`luhn-value ${st.doubled ? 'doubled' : ''} ${i === r.steps.length - 1 ? 'check' : ''}`}
+              >
+                {st.value}
+              </span>
+            ))}
+          </div>
+          <div className="muted small">
+            {t(
+              'Riga sopra: cifre del PAN (evidenziate quelle raddoppiate). Riga sotto: valore sommato.'
+            )}
+          </div>
+          <div className={r.valid ? 'help-decoded' : 'luhn-bad'}>
+            {t('Somma = {sum}', { sum: r.sum })} →{' '}
+            {r.valid
+              ? t('multiplo di 10: PAN valido ✓')
+              : t(
+                  'non multiplo di 10: PAN non valido. Cifra di controllo attesa {exp} (presente {cur}).',
+                  {
+                    exp: r.expectedCheckDigit,
+                    cur: r.steps[r.steps.length - 1].digit
+                  }
+                )}
+          </div>
+        </>
+      )}
+    </section>
+  )
 }
 
 function safeParseDol(hex: string): { tag: string; len: number }[] | null {
@@ -340,6 +430,8 @@ export default function HelpPanel({
             )}
           </Section>
         )}
+
+        {LUHN_TAGS.includes(tag) && <LuhnSection pan={panOf(tag, value)} />}
 
         {node && hasChildren(node) && (
           <Section title={t('Contenuto')}>

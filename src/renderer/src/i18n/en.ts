@@ -702,6 +702,28 @@ export const EN: Record<string, string> = {
   'Può contenere:': 'May contain:',
   'Presente nei template:': 'Present in templates:',
   Riferimenti: 'References',
+  'Controllo Luhn': 'Luhn check',
+  'Il controllo Luhn (algoritmo "mod 10", ISO/IEC 7812-1) verifica la cifra di controllo del PAN: l\'ultima cifra è scelta dall\'issuer in modo che la somma calcolata sulle cifre sia un multiplo di 10.':
+    'The Luhn check ("mod 10" algorithm, ISO/IEC 7812-1) verifies the PAN check digit: the issuer chooses the last digit so that the sum computed over the digits is a multiple of 10.',
+  'Serve a intercettare errori di digitazione o trascrizione: rileva qualsiasi cifra singola sbagliata e quasi tutti gli scambi tra due cifre adiacenti. Non è un controllo di sicurezza: chiunque può calcolare un PAN che lo supera.':
+    'It catches typing or transcription errors: it detects any single wrong digit and almost all swaps of two adjacent digits. It is not a security check: anyone can compute a PAN that passes it.',
+  "Partendo dall'ultima cifra (la cifra di controllo) e procedendo verso sinistra, raddoppia una cifra sì e una no: la seconda da destra, la quarta, e così via.":
+    'Starting from the last digit (the check digit) and moving left, double every second digit: the second from the right, the fourth, and so on.',
+  'Se un raddoppio supera 9, sottrai 9 (equivale a sommare le due cifre del risultato).':
+    'If a doubled value exceeds 9, subtract 9 (the same as adding its two digits).',
+  'Somma tutti i valori ottenuti, compresa la cifra di controllo.':
+    'Add up all the resulting values, including the check digit.',
+  'Il PAN è valido se la somma è un multiplo di 10.':
+    'The PAN is valid if the sum is a multiple of 10.',
+  'EMV non chiede al terminale di verificarlo sui dati letti dal chip, ma acquirer e sistemi di autorizzazione scartano i PAN non validi: per questo anche i PAN usati nei test devono superarlo.':
+    'EMV does not require the terminal to check it on data read from the chip, but acquirers and authorisation systems reject invalid PANs: this is why test PANs must pass it too.',
+  'Calcolo sul PAN corrente:': 'Computation on the current PAN:',
+  'Riga sopra: cifre del PAN (evidenziate quelle raddoppiate). Riga sotto: valore sommato.':
+    'Top row: PAN digits (doubled ones highlighted). Bottom row: value added to the sum.',
+  'Somma = {sum}': 'Sum = {sum}',
+  'multiplo di 10: PAN valido ✓': 'multiple of 10: valid PAN ✓',
+  'non multiplo di 10: PAN non valido. Cifra di controllo attesa {exp} (presente {cur}).':
+    'not a multiple of 10: invalid PAN. Expected check digit {exp} (found {cur}).',
   // ---- Contextual help (generated) ----
   'Selezione applicazione': 'Application selection',
   "SELECT di PPSE/PSE e AID: il terminale costruisce la candidate list e sceglie l'applicazione.":
