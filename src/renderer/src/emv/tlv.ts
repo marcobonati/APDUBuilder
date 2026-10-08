@@ -129,11 +129,21 @@ export function encodeNodes(nodes: TlvNode[]): Encoded {
   return { hex: nonEmpty.map((s) => s.hex).join(''), segments: nonEmpty }
 }
 
+/** Encoded value of constructed nodes. Nodes are immutable, so the cache never goes stale. */
+const valueCache = new WeakMap<TlvNode, string>()
+
 /** Value bytes of a node, as they will be encoded. */
 export function valueHex(node: TlvNode): string {
   if (node.raw) return safeValue(node.value)
   if (node.concat) return node.children.map((c) => safeValue(c.value)).join('')
-  if (isConstructedTag(node.tag)) return encodeNodes(node.children).hex
+  if (isConstructedTag(node.tag)) {
+    let hex = valueCache.get(node)
+    if (hex === undefined) {
+      hex = encodeNodes(node.children).hex
+      valueCache.set(node, hex)
+    }
+    return hex
+  }
   return safeValue(node.value)
 }
 

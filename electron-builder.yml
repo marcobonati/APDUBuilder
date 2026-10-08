@@ -2,13 +2,19 @@ appId: com.fabrick.emvapdubuilder
 productName: EMV APDU Builder
 directories:
   buildResources: build
+# Only the compiled app goes into app.asar: React and the other libraries are
+# bundled by electron-vite, so no node_modules are shipped.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - out/**
+  - resources/**
+  - package.json
+# Chromium UI translations for the app languages only (about 45 MB less on macOS).
+electronLanguages:
+  - en
+  - en-US
+  - en-GB
+  - it
+compression: maximum
 asarUnpack:
   - resources/**
 win:

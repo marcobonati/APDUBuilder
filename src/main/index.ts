@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { buildMenu, recentLabel } from './menu'
 import { setLang, tr } from './messages'
@@ -13,6 +12,26 @@ import {
   recentFiles,
   removeRecent
 } from './recent'
+
+const isDev = !app.isPackaged
+
+/**
+ * DevTools on F12 in development; in production the reload shortcuts are
+ * disabled, so a stray Cmd/Ctrl+R cannot discard the open project.
+ */
+function watchShortcuts(win: BrowserWindow): void {
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    if (isDev) {
+      if (input.code === 'F12') {
+        win.webContents.toggleDevTools()
+        event.preventDefault()
+      }
+    } else if (input.code === 'KeyR' && (input.control || input.meta)) {
+      event.preventDefault()
+    }
+  })
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -58,7 +77,7 @@ function createWindow(): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
@@ -213,15 +232,11 @@ function registerProjectIpc(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.fabrick.emvapdubuilder')
-
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+  // Windows: groups the taskbar entries and notifications under the app id.
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(isDev ? process.execPath : 'com.fabrick.emvapdubuilder')
+  }
+  app.on('browser-window-created', (_, window) => watchShortcuts(window))
 
   loadRecent()
   onRecentChange(() => {

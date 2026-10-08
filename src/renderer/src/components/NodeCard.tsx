@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { describeValue } from '../emv/formats'
 import { normalizeHex } from '../emv/hex'
 import { tagDef } from '../emv/tags'
@@ -12,7 +12,8 @@ import {
 } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
 import { t } from '../i18n'
-import { useEditor } from '../state/context'
+import { useEditor, useViewState } from '../state/context'
+import type { Issue } from '../emv/validate'
 import AddTagMenu from './AddTagMenu'
 import { LabelChip, LabelPicker } from './Labels'
 import { nodeLabels } from '../state/labels'
@@ -21,7 +22,8 @@ import ValueEditor from './editors/ValueEditor'
 
 interface Props {
   node: TlvNode
-  parent: TlvNode | null
+  /** Child of a Format 1 template: value only, no tag and length. */
+  inFormat1: boolean
   index: number
   count: number
   depth: number
@@ -78,24 +80,29 @@ function TagBadge({ node }: { node: TlvNode }): React.JSX.Element {
   )
 }
 
-export default function NodeCard({ node, parent, index, count, depth }: Props): React.JSX.Element {
-  const {
-    dispatch,
-    hovered,
-    setHovered,
-    selected,
-    setSelected,
-    scrollTarget,
-    issuesByNode,
-    labels
-  } = useEditor()
+const NO_ISSUES: Issue[] = []
+
+/**
+ * Memoized: the tree is immutable and unchanged subtrees keep their identity,
+ * so an edit re-renders only the path from the root to the edited node.
+ */
+const NodeCard = memo(function NodeCard({
+  node,
+  inFormat1,
+  index,
+  count,
+  depth
+}: Props): React.JSX.Element {
+  const { dispatch, view, setHovered, setSelected, labels } = useEditor()
+  const hl = useViewState((s) => s.hovered === node.id)
+  const sel = useViewState((s) => s.selected === node.id)
+  const scrollTarget = useViewState((s) => (s.scrollTarget?.id === node.id ? s.scrollTarget : null))
+  const issues = useViewState((s) => s.issuesByNode.get(node.id) ?? NO_ISSUES)
   const ref = useRef<HTMLDivElement>(null)
   const def = tagDef(node.tag)
   const container = hasChildren(node)
-  const inFormat1 = parent?.concat === true
   const vhex = valueHex(node)
   const len = vhex.length / 2
-  const issues = issuesByNode.get(node.id) ?? []
   const worst = issues.some((i) => i.level === 'error')
     ? 'error'
     : issues.some((i) => i.level === 'warning')
@@ -106,9 +113,8 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
   const omitted = !inFormat1 && isOmitted(node)
 
   useEffect(() => {
-    if (scrollTarget?.id === node.id)
-      ref.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [scrollTarget, node.id])
+    if (scrollTarget) ref.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [scrollTarget])
 
   const update = (patch: Partial<TlvNode>): void => dispatch({ type: 'update', id: node.id, patch })
   const [showLen, setShowLen] = useState(!!node.lengthOverride)
@@ -123,19 +129,19 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
         'node',
         container ? 'container' : 'primitive',
         `depth-${Math.min(depth, 5)}`,
-        hovered === node.id ? 'hl' : '',
-        selected === node.id ? 'sel' : '',
+        hl ? 'hl' : '',
+        sel ? 'sel' : '',
         worst ? `has-${worst}` : '',
         empty && node.required ? 'todo' : '',
         omitted ? 'omitted' : ''
       ].join(' ')}
       onMouseOver={(e) => {
         e.stopPropagation()
-        if (hovered !== node.id) setHovered(node.id)
+        if (view.get().hovered !== node.id) setHovered(node.id)
       }}
       onClick={(e) => {
         e.stopPropagation()
-        if (selected !== node.id) setSelected(node.id)
+        if (!sel) setSelected(node.id)
       }}
     >
       <div className="node-head">
@@ -328,7 +334,7 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
                 <NodeCard
                   key={c.id}
                   node={c}
-                  parent={node}
+                  inFormat1={node.concat === true}
                   index={i}
                   count={node.children.length}
                   depth={depth + 1}
@@ -352,4 +358,6 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
       )}
     </div>
   )
-}
+})
+
+export default NodeCard
