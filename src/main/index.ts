@@ -1,4 +1,5 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
+import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -24,6 +25,22 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  const contentsId = mainWindow.webContents.id
+  mainWindow.on('close', (e) => {
+    if (!dirtyWindows.has(contentsId)) return
+    const tr = MESSAGES[lang]
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'warning',
+      buttons: [tr.cancel, tr.closeWithoutSaving],
+      defaultId: 0,
+      cancelId: 0,
+      message: tr.unsavedTitle,
+      detail: tr.unsavedDetail
+    })
+    if (choice === 0) e.preventDefault()
+    else dirtyWindows.delete(contentsId)
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -36,6 +53,91 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+// ---------------- Project files ----------------
+
+const MESSAGES = {
+  it: {
+    cancel: 'Annulla',
+    closeWithoutSaving: 'Chiudi senza salvare',
+    unsavedTitle: 'Il progetto ha modifiche non salvate',
+    unsavedDetail:
+      'Le modifiche restano nella sessione, ma non sono state salvate nel file del progetto.',
+    openTitle: 'Apri progetto',
+    saveTitle: 'Salva progetto',
+    fileType: 'Progetto EMV APDU Builder'
+  },
+  en: {
+    cancel: 'Cancel',
+    closeWithoutSaving: 'Close without saving',
+    unsavedTitle: 'The project has unsaved changes',
+    unsavedDetail:
+      'Changes are kept in the session, but they have not been saved to the project file.',
+    openTitle: 'Open project',
+    saveTitle: 'Save project',
+    fileType: 'EMV APDU Builder project'
+  }
+}
+
+/** Language chosen in the renderer, used for native dialogs. */
+let lang: keyof typeof MESSAGES = 'it'
+
+function projectFilters(): Electron.FileFilter[] {
+  return [
+    { name: MESSAGES[lang].fileType, extensions: ['emvproj'] },
+    { name: 'JSON', extensions: ['json'] }
+  ]
+}
+
+/** WebContents ids of windows whose project has unsaved changes. */
+const dirtyWindows = new Set<number>()
+
+function registerProjectIpc(): void {
+  ipcMain.handle('project:open', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const options = {
+      title: MESSAGES[lang].openTitle,
+      filters: projectFilters(),
+      properties: ['openFile' as const]
+    }
+    const r = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (r.canceled || !r.filePaths[0]) return null
+    const path = r.filePaths[0]
+    return { path, content: await readFile(path, 'utf8') }
+  })
+
+  ipcMain.handle(
+    'project:save',
+    async (e, args: { content: string; path: string | null; suggestedName: string }) => {
+      let target = args.path
+      if (!target) {
+        const win = BrowserWindow.fromWebContents(e.sender)
+        const options = {
+          title: MESSAGES[lang].saveTitle,
+          defaultPath: `${args.suggestedName.replace(/[\\/:*?"<>|]/g, '_')}.emvproj`,
+          filters: projectFilters()
+        }
+        const r = win
+          ? await dialog.showSaveDialog(win, options)
+          : await dialog.showSaveDialog(options)
+        if (r.canceled || !r.filePath) return null
+        target = r.filePath
+      }
+      await writeFile(target, args.content, 'utf8')
+      return target
+    }
+  )
+
+  ipcMain.on('app:lang', (_e, l: string) => {
+    if (l === 'it' || l === 'en') lang = l
+  })
+
+  ipcMain.on('project:dirty', (e, dirty: boolean) => {
+    if (dirty) dirtyWindows.add(e.sender.id)
+    else dirtyWindows.delete(e.sender.id)
+    BrowserWindow.fromWebContents(e.sender)?.setDocumentEdited(dirty)
+  })
 }
 
 // This method will be called when Electron has finished
@@ -52,6 +154,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  registerProjectIpc()
   createWindow()
 
   app.on('activate', function () {

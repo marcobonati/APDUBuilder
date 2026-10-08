@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import type { EnumOption, TagDef } from './types'
 
 export const KNOWN_AIDS: EnumOption[] = [
@@ -241,7 +242,7 @@ const DEFS: TagDef[] = [
     tag: '5F2D',
     name: 'Language Preference',
     desc: 'Da 1 a 4 codici lingua ISO 639-1 (2 caratteri ciascuno) in ordine di preferenza, es. "iten".',
-    format: 'an',
+    format: 'langs',
     min: 2,
     max: 8,
     example: '6974656E'
@@ -1062,7 +1063,7 @@ export function tagDef(tag: string): TagDef {
   return (
     TAGS[tag.toUpperCase()] ?? {
       tag: tag.toUpperCase(),
-      name: 'Tag sconosciuto / proprietario',
+      name: t('Tag sconosciuto / proprietario'),
       desc: 'Tag non presente nel dizionario: il valore è trattato come binario.',
       format: 'b'
     }
@@ -1105,11 +1106,11 @@ export const STATUS_WORDS: StatusWord[] = [
 
 export function describeSw(sw: string): string {
   const exact = STATUS_WORDS.find((s) => s.sw === sw)
-  if (exact) return exact.label
+  if (exact) return t(exact.label)
   if (/^61[0-9A-F]{2}$/.test(sw))
-    return `Altri ${parseInt(sw.substr(2), 16)} byte disponibili (GET RESPONSE)`
-  if (/^6C[0-9A-F]{2}$/.test(sw)) return `Le errato, usare Le = ${sw.substr(2)}`
+    return t('Altri {n} byte disponibili (GET RESPONSE)', { n: parseInt(sw.substr(2), 16) })
+  if (/^6C[0-9A-F]{2}$/.test(sw)) return t('Le errato, usare Le = {le}', { le: sw.substr(2) })
   if (/^63C[0-9A-F]$/.test(sw))
-    return `Verifica fallita, ${parseInt(sw.substr(3), 16)} tentativi rimanenti`
-  return 'Status word non standard'
+    return t('Verifica fallita, {n} tentativi rimanenti', { n: parseInt(sw.substr(3), 16) })
+  return t('Status word non standard')
 }

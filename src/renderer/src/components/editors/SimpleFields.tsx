@@ -8,6 +8,7 @@ import {
 import { hexToText, isPrintableHex, textToHex } from '../../emv/hex'
 import type { EnumOption, TagDef } from '../../emv/types'
 import { useSynced } from '../../hooks/useSynced'
+import { t } from '../../i18n'
 
 interface Props {
   def: TagDef
@@ -21,13 +22,15 @@ export function TextField({ def, value, onChange }: Props): React.JSX.Element {
   const nonPrintable = value !== '' && !isPrintableHex(value)
   return (
     <label className="field">
-      <span className="field-label">Testo ({def.format})</span>
+      <span className="field-label">
+        {t('Testo')} ({def.format})
+      </span>
       <div className="field-row">
         <input
           className="input"
           value={nonPrintable ? '' : text}
           placeholder={
-            nonPrintable ? 'Valore non stampabile: modificalo in hex' : 'Scrivi il testo…'
+            nonPrintable ? t('Valore non stampabile: modificalo in hex') : t('Scrivi il testo…')
           }
           maxLength={max}
           spellCheck={false}
@@ -53,19 +56,21 @@ export function NumericField({ def, value, onChange }: Props): React.JSX.Element
   const digits = def.max !== undefined ? def.max * 2 : undefined
   return (
     <label className="field">
-      <span className="field-label">Numerico (n{digits ?? ''}) – padding a sinistra con 0</span>
+      <span className="field-label">
+        {t('Numerico (n{d}) – padding a sinistra con 0', { d: digits ?? '' })}
+      </span>
       <input
         className="input mono"
         value={text}
         inputMode="numeric"
-        placeholder="Solo cifre 0–9"
+        placeholder={t('Solo cifre 0–9')}
         onChange={(e) => {
           setText(e.target.value)
           const h = toHex(e.target.value)
           if (h !== null) onChange(h)
         }}
       />
-      {!/^\d*$/.test(text) && <span className="field-error">Ammesse solo cifre</span>}
+      {!/^\d*$/.test(text) && <span className="field-error">{t('Ammesse solo cifre')}</span>}
     </label>
   )
 }
@@ -75,19 +80,19 @@ export function CompressedField({ value, onChange }: Props): React.JSX.Element {
   const [text, setText] = useSynced(value, hexToCompressed, toHex)
   return (
     <label className="field">
-      <span className="field-label">Numerico compresso (cn) – padding F automatico</span>
+      <span className="field-label">{t('Numerico compresso (cn) – padding F automatico')}</span>
       <input
         className="input mono"
         value={text}
         inputMode="numeric"
-        placeholder="Solo cifre 0–9"
+        placeholder={t('Solo cifre 0–9')}
         onChange={(e) => {
           setText(e.target.value)
           const h = toHex(e.target.value)
           if (h !== null) onChange(h)
         }}
       />
-      {!/^\d*$/.test(text) && <span className="field-error">Ammesse solo cifre</span>}
+      {!/^\d*$/.test(text) && <span className="field-error">{t('Ammesse solo cifre')}</span>}
     </label>
   )
 }
@@ -103,7 +108,7 @@ export function DateField({ value, onChange }: Props): React.JSX.Element {
   const today = (): string => isoToYymmdd(new Date().toISOString().substr(0, 10))
   return (
     <div className="field">
-      <span className="field-label">Data (YYMMDD)</span>
+      <span className="field-label">{t('Data (YYMMDD)')}</span>
       <div className="field-row">
         <input
           type="date"
@@ -112,13 +117,13 @@ export function DateField({ value, onChange }: Props): React.JSX.Element {
           onChange={(e) => onChange(isoToYymmdd(e.target.value))}
         />
         <button className="btn small" onClick={() => onChange(today())}>
-          Oggi
+          {t('Oggi')}
         </button>
         <button className="btn small" onClick={() => onChange(endOfMonth(3))}>
-          +3 anni (fine mese)
+          {t('+3 anni (fine mese)')}
         </button>
         <button className="btn small" onClick={() => onChange(endOfMonth(-1))}>
-          Scaduta
+          {t('Scaduta')}
         </button>
       </div>
     </div>
@@ -135,16 +140,16 @@ export function OptionPicker({ options, value, onChange }: OptionsProps): React.
   const known = options.some((o) => o.value === value)
   return (
     <label className="field">
-      <span className="field-label">Valori noti</span>
+      <span className="field-label">{t('Valori noti')}</span>
       <select
         className="input"
         value={known ? value : ''}
         onChange={(e) => e.target.value && onChange(e.target.value)}
       >
-        <option value="">{value ? '— personalizzato —' : '— scegli —'}</option>
+        <option value="">{value ? t('— personalizzato —') : t('— scegli —')}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label} ({o.value})
+            {t(o.label)} ({o.value})
           </option>
         ))}
       </select>

@@ -10,6 +10,8 @@ import {
 } from './hex'
 import { parseDol, tagError } from './tlv'
 import type { TagDef } from './types'
+import { t } from '../i18n'
+import { isKnownLanguage, languageName, splitLanguages } from './languages'
 
 // ---------------- Numeric ----------------
 
@@ -79,10 +81,10 @@ export function encodeAfl(entries: AflEntry[]): string {
 }
 
 export function aflEntryError(e: AflEntry): string | null {
-  if (e.sfi < 1 || e.sfi > 30) return 'SFI deve essere tra 1 e 30'
-  if (e.first < 1) return 'Il primo record deve essere ≥ 1'
+  if (e.sfi < 1 || e.sfi > 30) return t('SFI deve essere tra 1 e 30')
+  if (e.first < 1) return t('Il primo record deve essere ≥ 1')
   if (e.last < e.first) return "L'ultimo record deve essere ≥ del primo"
-  if (e.oda > e.last - e.first + 1) return 'I record ODA eccedono i record del gruppo'
+  if (e.oda > e.last - e.first + 1) return t('I record ODA eccedono i record del gruppo')
   return null
 }
 
@@ -177,8 +179,8 @@ export function parseTrack2(hex: string): Track2 {
   }
 }
 
-export function encodeTrack2(t: Track2): string {
-  const s = `${t.pan}D${t.expiry}${t.serviceCode}${t.discretionary}`
+export function encodeTrack2(tk: Track2): string {
+  const s = `${tk.pan}D${tk.expiry}${tk.serviceCode}${tk.discretionary}`
   return s.length % 2 ? s + 'F' : s
 }
 
@@ -204,14 +206,18 @@ export function describeValue(def: TagDef, hex: string): string {
   if (!hex || !isHexBytes(hex)) return ''
   try {
     if (def.bitfield && BITFIELDS[def.bitfield]) {
-      return describeBits(BITFIELDS[def.bitfield], hexToBytes(hex)) || 'nessun bit impostato'
+      return describeBits(BITFIELDS[def.bitfield], hexToBytes(hex)) || t('nessun bit impostato')
     }
     const opt = def.options?.find((o) => o.value === hex)
-    if (opt) return opt.label
+    if (opt) return t(opt.label)
     switch (def.format) {
       case 'an':
       case 'ans':
-        return isPrintableHex(hex) ? `"${hexToText(hex)}"` : 'contiene caratteri non stampabili'
+        return isPrintableHex(hex) ? `"${hexToText(hex)}"` : t('contiene caratteri non stampabili')
+      case 'langs':
+        return isPrintableHex(hex)
+          ? splitLanguages(hexToText(hex)).map(languageName).join(' → ')
+          : t('contiene caratteri non stampabili')
       case 'date':
         return formatYymmdd(hex)
       case 'cn':
@@ -219,8 +225,8 @@ export function describeValue(def: TagDef, hex: string): string {
       case 'n':
         return String(parseInt(hex, 10))
       case 'track2': {
-        const t = parseTrack2(hex)
-        return `PAN ${t.pan} · scad. ${t.expiry.substr(2, 2)}/${t.expiry.substr(0, 2)} · SC ${t.serviceCode}`
+        const tk = parseTrack2(hex)
+        return `PAN ${tk.pan} · ${t('scad.')} ${tk.expiry.substr(2, 2)}/${tk.expiry.substr(0, 2)} · SC ${tk.serviceCode}`
       }
       case 'afl':
         return parseAfl(hex)
@@ -235,18 +241,22 @@ export function describeValue(def: TagDef, hex: string): string {
         return c.rules
           .map(
             (r) =>
-              CVM_METHODS.find((m) => m.value === r.method)?.label ?? `CVM ${toHexByte(r.method)}`
+              t(CVM_METHODS.find((m) => m.value === r.method)?.label ?? '') ||
+              `CVM ${toHexByte(r.method)}`
           )
           .join(' → ')
       }
     }
     if (def.tag === '9F36' || def.tag === '9F13') return `${hexToInt(hex)}`
-    if (def.tag === '9F17') return `${hexToInt(hex)} tentativi`
+    if (def.tag === '9F17') return t('{n} tentativi', { n: hexToInt(hex) })
     if (def.tag === '88' || def.tag === '8F' || def.tag === '9F14' || def.tag === '9F23') {
       return `${hexToInt(hex)}`
     }
     if (def.tag === '9F4D')
-      return `SFI ${hexToInt(hex.substr(0, 2))}, ${hexToInt(hex.substr(2, 2))} record`
+      return t('SFI {sfi}, {n} record', {
+        sfi: hexToInt(hex.substr(0, 2)),
+        n: hexToInt(hex.substr(2, 2))
+      })
   } catch {
     return ''
   }
@@ -259,70 +269,86 @@ export function valueIssues(def: TagDef, hex: string): string[] {
   if (!isHexBytes(hex)) {
     out.push(
       /[^0-9A-F]/i.test(hex)
-        ? 'Il valore contiene caratteri non esadecimali'
-        : 'Numero dispari di cifre esadecimali'
+        ? t('Il valore contiene caratteri non esadecimali')
+        : t('Numero dispari di cifre esadecimali')
     )
     return out
   }
   const len = hex.length / 2
   if (len > 0) {
     if (def.min !== undefined && def.max !== undefined && def.min === def.max && len !== def.min) {
-      out.push(`Lunghezza attesa ${def.min} byte, presenti ${len}`)
+      out.push(t('Lunghezza attesa {n} byte, presenti {len}', { n: def.min, len }))
     } else {
       if (def.min !== undefined && len < def.min)
-        out.push(`Lunghezza minima ${def.min} byte, presenti ${len}`)
+        out.push(t('Lunghezza minima {n} byte, presenti {len}', { n: def.min, len }))
       if (def.max !== undefined && len > def.max)
-        out.push(`Lunghezza massima ${def.max} byte, presenti ${len}`)
+        out.push(t('Lunghezza massima {n} byte, presenti {len}', { n: def.max, len }))
     }
   }
   switch (def.format) {
     case 'n':
     case 'date':
-      if (!/^\d*$/.test(hex)) out.push('Formato numerico (n): ammesse solo cifre 0–9')
-      if (def.format === 'date' && hex && !yymmddToIso(hex)) out.push('Data non valida (YYMMDD)')
+      if (!/^\d*$/.test(hex)) out.push(t('Formato numerico (n): ammesse solo cifre 0–9'))
+      if (def.format === 'date' && hex && !yymmddToIso(hex)) out.push(t('Data non valida (YYMMDD)'))
       break
     case 'cn':
-      if (!/^\d*F*$/.test(hex)) out.push('Formato cn: cifre 0–9 seguite da eventuale padding F')
+      if (!/^\d*F*$/.test(hex)) out.push(t('Formato cn: cifre 0–9 seguite da eventuale padding F'))
       break
     case 'an':
       if (!/^[0-9A-Za-z]*$/.test(hexToText(hex)))
-        out.push('Formato an: ammessi solo caratteri alfanumerici')
+        out.push(t('Formato an: ammessi solo caratteri alfanumerici'))
       break
     case 'ans':
-      if (!isPrintableHex(hex)) out.push('Contiene caratteri non stampabili')
+      if (!isPrintableHex(hex)) out.push(t('Contiene caratteri non stampabili'))
       break
+    case 'langs': {
+      const text = hexToText(hex)
+      if (len % 2) {
+        out.push(t('I codici lingua devono essere di 2 caratteri'))
+        break
+      }
+      for (const code of splitLanguages(text)) {
+        if (isKnownLanguage(code)) continue
+        if (isKnownLanguage(code.toLowerCase())) {
+          out.push(t('Codice lingua {code}: ISO 639-1 usa lettere minuscole', { code }))
+        } else {
+          out.push(t('Codice lingua sconosciuto (non ISO 639-1): {code}', { code }))
+        }
+      }
+      break
+    }
     case 'afl':
-      if (len % 4) out.push("L'AFL deve essere un multiplo di 4 byte")
+      if (len % 4) out.push(t("L'AFL deve essere un multiplo di 4 byte"))
       else
         parseAfl(hex).forEach((e, i) => {
           const err = aflEntryError(e)
-          if (err) out.push(`AFL voce ${i + 1}: ${err}`)
+          if (err) out.push(`${t('AFL voce {n}', { n: i + 1 })}: ${err}`)
         })
       break
     case 'dol':
       try {
         parseDol(hex).forEach((e) => {
           const err = tagError(e.tag)
-          if (err) out.push(`DOL: tag ${e.tag} non valido`)
+          if (err) out.push(t('DOL: tag {tag} non valido', { tag: e.tag }))
         })
       } catch (e) {
-        out.push(`DOL non valido: ${(e as Error).message}`)
+        out.push(`${t('DOL non valido')}: ${(e as Error).message}`)
       }
       break
     case 'cvm':
-      if (len >= 8 && (len - 8) % 2) out.push('CVM List: le regole devono essere di 2 byte')
+      if (len >= 8 && (len - 8) % 2) out.push(t('CVM List: le regole devono essere di 2 byte'))
       break
     case 'track2': {
-      const t = parseTrack2(hex)
-      if (!hex.includes('D')) out.push('Track 2: manca il separatore D')
-      else if (!/^\d{4}$/.test(t.expiry)) out.push('Track 2: scadenza YYMM non valida')
-      if (t.pan && !luhnValid(t.pan)) out.push('Track 2: il PAN non supera il controllo Luhn')
+      const tk = parseTrack2(hex)
+      if (!hex.includes('D')) out.push(t('Track 2: manca il separatore D'))
+      else if (!/^\d{4}$/.test(tk.expiry)) out.push(t('Track 2: scadenza YYMM non valida'))
+      if (tk.pan && !luhnValid(tk.pan)) out.push(t('Track 2: il PAN non supera il controllo Luhn'))
       break
     }
   }
   if (def.tag === '5A') {
     const pan = hexToCompressed(hex)
-    if (pan && !luhnValid(pan)) out.push('Il PAN non supera il controllo Luhn')
+    if (pan && !luhnValid(pan)) out.push(t('Il PAN non supera il controllo Luhn'))
   }
   return out
 }

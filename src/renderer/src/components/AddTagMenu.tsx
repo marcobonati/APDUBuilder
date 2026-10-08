@@ -3,6 +3,7 @@ import { ROOT_TAGS, TAGS, tagDef } from '../emv/tags'
 import { newId, tagError } from '../emv/tlv'
 import { normalizeHex } from '../emv/hex'
 import type { TlvNode } from '../emv/types'
+import { t } from '../i18n'
 
 const FORMAT1_TAGS = ['82', '94', '9F27', '9F36', '9F26', '9F10', '9F4B']
 
@@ -67,14 +68,16 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
   return (
     <div className="add-menu" ref={ref}>
       <button className="btn ghost small" onClick={() => setOpen(!open)}>
-        + {label ?? (parent ? `Aggiungi tag in ${parent.tag}` : 'Aggiungi tag radice')}
+        +{' '}
+        {label ??
+          (parent ? t('Aggiungi tag in {tag}', { tag: parent.tag }) : t('Aggiungi tag radice'))}
       </button>
       {open && (
         <div className="menu">
           <input
             autoFocus
             className="input small"
-            placeholder="Cerca per tag o nome, o digita un tag hex…"
+            placeholder={t('Cerca per tag o nome, o digita un tag hex…')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -86,20 +89,22 @@ export default function AddTagMenu({ parent, onAdd, label }: Props): React.JSX.E
             {customValid && !TAGS[custom] && (
               <button className="menu-item" onClick={() => add(custom)}>
                 <span className="tag-badge small">{custom}</span>
-                <span>Tag personalizzato</span>
+                <span>{t('Tag personalizzato')}</span>
               </button>
             )}
             {suggested.filter(matches).length > 0 && (
-              <div className="menu-group">Suggeriti{parent ? ` per ${parent.tag}` : ''}</div>
+              <div className="menu-group">
+                {parent ? t('Suggeriti per {tag}', { tag: parent.tag }) : t('Suggeriti')}
+              </div>
             )}
             {suggested.filter(matches).map(item)}
             {!parent && (
               <button className="menu-item" onClick={() => add('', true)}>
                 <span className="tag-badge small raw">RAW</span>
-                <span>Dati non TLV (es. GET CHALLENGE)</span>
+                <span>{t('Dati non TLV (es. GET CHALLENGE)')}</span>
               </button>
             )}
-            {others.length > 0 && <div className="menu-group">Altri tag</div>}
+            {others.length > 0 && <div className="menu-group">{t('Altri tag')}</div>}
             {others.map(item)}
           </div>
         </div>

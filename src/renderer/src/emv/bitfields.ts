@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 export interface BitOption {
   value: number
   label: string
@@ -185,11 +187,11 @@ export function describeBits(def: BitfieldDef, bytes: number[]): string {
     const v = getField(bytes, f)
     if (f.options) {
       const o = f.options.find((x) => x.value === v)
-      if (v !== 0 || f.showZero) parts.push(o ? o.label : `${f.label}: ${v}`)
+      if (v !== 0 || f.showZero) parts.push(o ? t(o.label) : `${t(f.label)}: ${v}`)
     } else if (f.hi !== f.lo) {
-      if (v !== 0) parts.push(`${f.label}: ${v}`)
+      if (v !== 0) parts.push(`${t(f.label)}: ${v}`)
     } else if (v) {
-      parts.push(f.label)
+      parts.push(t(f.label))
     }
   }
   return parts.join(' · ')

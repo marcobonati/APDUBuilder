@@ -3,6 +3,7 @@ import { hasChildren, isConstructedTag, tagError, valueHex } from './tlv'
 import { tagDef } from './tags'
 import type { TlvNode } from './types'
 import { isHexBytes } from './hex'
+import { t } from '../i18n'
 
 export type IssueLevel = 'error' | 'warning' | 'info'
 
@@ -30,8 +31,8 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
       }
       if (n.raw) {
         if (!isHexBytes(n.value))
-          add('error', 'Dati raw non esadecimali o con numero dispari di cifre')
-        else if (!n.value && n.required) add('warning', 'Dati obbligatori vuoti')
+          add('error', t('Dati raw non esadecimali o con numero dispari di cifre'))
+        else if (!n.value && n.required) add('warning', t('Dati obbligatori vuoti'))
         continue
       }
       const tErr = tagError(n.tag)
@@ -44,19 +45,23 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
 
       seen.set(n.tag, (seen.get(n.tag) ?? 0) + 1)
       if (seen.get(n.tag) === 2 && !def.repeatable)
-        add('warning', `${label}: tag duplicato nello stesso template`)
+        add('warning', `${label}: ${t('tag duplicato nello stesso template')}`)
 
       if (parent && !parent.concat) {
         const allowed = tagDef(parent.tag).children
         if (allowed && !allowed.includes(n.tag)) {
-          add('info', `${n.tag} non è tipico all'interno di ${parent.tag}`)
+          add(
+            'info',
+            t("{tag} non è tipico all'interno di {parent}", { tag: n.tag, parent: parent.tag })
+          )
         }
       }
       if (def.source === 'terminal')
-        add('info', `${label}: è un dato del terminale, non della carta`)
+        add('info', `${label}: ${t('è un dato del terminale, non della carta')}`)
 
       if (hasChildren(n)) {
-        if (n.children.length === 0 && n.required) add('warning', `${label}: template vuoto`)
+        if (n.children.length === 0 && n.required)
+          add('warning', `${label}: ${t('template vuoto')}`)
         if (n.concat) {
           for (const c of n.children) {
             const cdef = tagDef(c.tag)
@@ -64,7 +69,7 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
               issues.push({
                 nodeId: c.id,
                 level: 'warning',
-                message: `${c.tag} ${cdef.name}: campo obbligatorio vuoto`
+                message: `${c.tag} ${cdef.name}: ${t('campo obbligatorio vuoto')}`
               })
             }
             for (const m of valueIssues(cdef, c.value)) {
@@ -79,7 +84,7 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
           walk(n.children, n)
         }
       } else {
-        if (!n.value && n.required) add('warning', `${label}: campo obbligatorio vuoto`)
+        if (!n.value && n.required) add('warning', `${label}: ${t('campo obbligatorio vuoto')}`)
         for (const m of valueIssues(def, n.value)) {
           add(isHexBytes(n.value) ? 'warning' : 'error', `${n.tag}: ${m}`)
         }
@@ -87,14 +92,17 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
 
       if (n.lengthOverride) {
         if (!isHexBytes(n.lengthOverride))
-          add('error', `${n.tag}: lunghezza forzata non esadecimale`)
+          add('error', `${n.tag}: ${t('lunghezza forzata non esadecimale')}`)
         else {
           const actual = valueHex(n).length / 2
-          add('info', `${n.tag}: lunghezza forzata a ${n.lengthOverride} (reale ${actual} byte)`)
+          add(
+            'info',
+            `${n.tag}: ${t('lunghezza forzata a {forced} (reale {actual} byte)', { forced: n.lengthOverride, actual })}`
+          )
         }
       }
       if (isConstructedTag(n.tag) && n.concat)
-        add('error', `${n.tag}: tag costruito usato come formato 1`)
+        add('error', `${n.tag}: ${t('tag costruito usato come formato 1')}`)
     }
   }
 
@@ -104,20 +112,22 @@ export function validate(nodes: TlvNode[], sw: string, totalBytes: number): Issu
     issues.push({
       nodeId: null,
       level: 'error',
-      message: 'Status word non valida'
+      message: t('Status word non valida')
     })
   else if (sw !== '9000' && !sw.startsWith('61') && !sw.startsWith('62') && nodes.length > 0) {
     issues.push({
       nodeId: null,
       level: 'info',
-      message: `Con SW ${sw} la carta normalmente non restituisce dati`
+      message: t('Con SW {sw} la carta normalmente non restituisce dati', { sw })
     })
   }
   if (totalBytes > 256) {
     issues.push({
       nodeId: null,
       level: 'warning',
-      message: `I dati superano 256 byte (${totalBytes}): servono extended length o GET RESPONSE`
+      message: t('I dati superano 256 byte ({n}): servono extended length o GET RESPONSE', {
+        n: totalBytes
+      })
     })
   }
   return issues

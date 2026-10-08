@@ -1,8 +1,18 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  openProject: (): Promise<{ path: string; content: string } | null> =>
+    ipcRenderer.invoke('project:open'),
+  saveProject: (
+    content: string,
+    path: string | null,
+    suggestedName: string
+  ): Promise<string | null> => ipcRenderer.invoke('project:save', { content, path, suggestedName }),
+  setDirty: (dirty: boolean): void => ipcRenderer.send('project:dirty', dirty),
+  setLang: (lang: 'it' | 'en'): void => ipcRenderer.send('app:lang', lang)
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

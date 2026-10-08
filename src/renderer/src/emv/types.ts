@@ -13,6 +13,7 @@ export type ValueFormat =
   | 'afl' // Application File Locator
   | 'cvm' // CVM List
   | 'track2' // Track 2 equivalent data
+  | 'langs' // an, sequence of ISO 639-1 codes (Language Preference)
 
 export interface EnumOption {
   value: string

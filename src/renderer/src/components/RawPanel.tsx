@@ -7,6 +7,7 @@ import type { Encoded, Segment } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
 import type { Issue } from '../emv/validate'
 import { useEditor } from '../state/context'
+import { t } from '../i18n'
 
 interface Props {
   nodes: TlvNode[]
@@ -94,20 +95,20 @@ function segLabel(seg: Segment, map: Map<string, TlvNode>): string {
   const n = map.get(seg.path[seg.path.length - 1])
   if (seg.kind === 'sw') return 'Status Word'
   if (!n) return ''
-  if (n.raw) return 'Dati raw'
+  if (n.raw) return t('Dati raw')
   const what =
     seg.kind === 'tag'
       ? 'tag'
       : seg.kind === 'len'
         ? seg.autoLength
-          ? 'lunghezza (auto)'
-          : 'lunghezza forzata'
-        : 'valore'
+          ? t('lunghezza (auto)')
+          : t('lunghezza forzata')
+        : t('valore')
   return `${n.tag} ${tagDef(n.tag).name} – ${what}`
 }
 
 export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.JSX.Element {
-  const { dispatch, hovered, setHovered, reveal } = useEditor()
+  const { dispatch, hovered, setHovered, reveal, lang } = useEditor()
   const [includeSw, setIncludeSw] = useState(true)
   const [format, setFormat] = useState<CopyFormat>('spaced')
   const [copied, setCopied] = useState<string | null>(null)
@@ -134,7 +135,8 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
     }
   }
 
-  const dump = useMemo(() => tlvDump(nodes).join('\n'), [nodes])
+  // lang: the dump contains translated descriptions.
+  const dump = useMemo(() => tlvDump(nodes).join('\n'), [nodes, lang]) // eslint-disable-line react-hooks/exhaustive-deps
   const errors = issues.filter((i) => i.level === 'error').length
   const warnings = issues.filter((i) => i.level === 'warning').length
   const swKnown = STATUS_WORDS.some((s) => s.sw === sw)
@@ -143,16 +145,17 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
     <aside className="raw-panel">
       <section className="panel-section">
         <div className="section-head">
-          <h2>Risposta RAW</h2>
+          <h2>{t('Risposta RAW')}</h2>
           <span className="muted small">
-            {dataLen} byte dati{includeSw && swValid ? ' + 2 SW' : ''}
+            {t('{n} byte dati', { n: dataLen })}
+            {includeSw && swValid ? ' + 2 SW' : ''}
           </span>
         </div>
 
         <div className="legend">
           <span className="k-tag">Tag</span>
-          <span className="k-len">Lunghezza auto</span>
-          <span className="k-val">Valore</span>
+          <span className="k-len">{t('Lunghezza auto')}</span>
+          <span className="k-val">{t('Valore')}</span>
           <span className="k-sw">SW</span>
           <label className="small">
             <input
@@ -160,12 +163,12 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
               checked={includeSw}
               onChange={(e) => setIncludeSw(e.target.checked)}
             />{' '}
-            Includi SW
+            {t('Includi SW')}
           </label>
         </div>
 
         <div className="hexview" onMouseLeave={() => setHovered(null)}>
-          {rows.length === 0 && <div className="muted">Nessun dato</div>}
+          {rows.length === 0 && <div className="muted">{t('Nessun dato')}</div>}
           {rows.map((row, ri) => (
             <div className="hexrow" key={ri}>
               <span className="offset">
@@ -206,7 +209,7 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
           >
             {FORMATS.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.label}
+                {t(f.label)}
               </option>
             ))}
           </select>
@@ -214,7 +217,7 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
             className="btn primary small"
             onClick={() => doCopy(formatAs(fullHex, format), 'raw')}
           >
-            {copied === 'raw' ? '✓ Copiato' : 'Copia'}
+            {copied === 'raw' ? `✓ ${t('Copiato')}` : t('Copia')}
           </button>
         </div>
         <pre className="raw-text">{formatAs(fullHex, format)}</pre>
@@ -231,10 +234,10 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
             value={swKnown ? sw : ''}
             onChange={(e) => e.target.value && dispatch({ type: 'setSw', sw: e.target.value })}
           >
-            {!swKnown && <option value="">— personalizzata —</option>}
+            {!swKnown && <option value="">{t('— personalizzata —')}</option>}
             {STATUS_WORDS.map((s) => (
               <option key={s.sw} value={s.sw}>
-                {s.sw} – {s.label}
+                {s.sw} – {t(s.label)}
               </option>
             ))}
           </select>
@@ -246,17 +249,19 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
           />
         </div>
         <div className="muted small">
-          {swValid ? describeSw(sw) : 'Inserisci 4 cifre esadecimali'}
+          {swValid ? describeSw(sw) : t('Inserisci 4 cifre esadecimali')}
         </div>
       </section>
 
       <section className="panel-section">
         <div className="section-head">
-          <h2>Verifica</h2>
+          <h2>{t('Verifica')}</h2>
           <span className="small">
-            {errors > 0 && <span className="count error">{errors} errori</span>}
-            {warnings > 0 && <span className="count warning">{warnings} avvisi</span>}
-            {errors + warnings === 0 && <span className="count ok">✓ Nessun problema</span>}
+            {errors > 0 && <span className="count error">{t('{n} errori', { n: errors })}</span>}
+            {warnings > 0 && (
+              <span className="count warning">{t('{n} avvisi', { n: warnings })}</span>
+            )}
+            {errors + warnings === 0 && <span className="count ok">✓ {t('Nessun problema')}</span>}
           </span>
         </div>
         {issues.length > 0 && (
@@ -279,11 +284,11 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
         <div className="section-head">
           <h2>
             <button className="link-btn" onClick={() => setShowDump(!showDump)}>
-              {showDump ? '▾' : '▸'} Struttura TLV
+              {showDump ? '▾' : '▸'} {t('Struttura TLV')}
             </button>
           </h2>
           <button className="btn small" onClick={() => doCopy(dump, 'dump')}>
-            {copied === 'dump' ? '✓ Copiato' : 'Copia'}
+            {copied === 'dump' ? `✓ ${t('Copiato')}` : t('Copia')}
           </button>
         </div>
         {showDump && <pre className="dump">{dump || '—'}</pre>}

@@ -1,5 +1,6 @@
 import { hexToBytes, isHexBytes, toHexByte, bytesToHex } from './hex'
 import type { TlvNode } from './types'
+import { t } from '../i18n'
 
 export function newId(): string {
   return crypto.randomUUID()
@@ -17,20 +18,22 @@ export function hasChildren(node: TlvNode): boolean {
 
 /** Checks the BER-TLV tag structure (subsequent bytes, continuation bit). */
 export function tagError(tag: string): string | null {
-  if (!tag) return 'Tag vuoto'
-  if (!isHexBytes(tag)) return 'Il tag deve essere esadecimale con un numero pari di cifre'
+  if (!tag) return t('Tag vuoto')
+  if (!isHexBytes(tag)) return t('Il tag deve essere esadecimale con un numero pari di cifre')
   const bytes = hexToBytes(tag)
-  if (bytes[0] === 0x00 || bytes[0] === 0xff) return 'Il primo byte del tag non può essere 00 o FF'
+  if (bytes[0] === 0x00 || bytes[0] === 0xff)
+    return t('Il primo byte del tag non può essere 00 o FF')
   if ((bytes[0] & 0x1f) !== 0x1f) {
-    return bytes.length === 1 ? null : 'Tag a 1 byte: i bit b5-b1 del primo byte non sono 11111'
+    return bytes.length === 1 ? null : t('Tag a 1 byte: i bit b5-b1 del primo byte non sono 11111')
   }
   if (bytes.length === 1)
-    return 'Il primo byte indica un tag multi-byte ma manca il byte successivo'
+    return t('Il primo byte indica un tag multi-byte ma manca il byte successivo')
   for (let i = 1; i < bytes.length; i++) {
     const last = i === bytes.length - 1
     const more = (bytes[i] & 0x80) !== 0
-    if (last && more) return `Il byte ${i + 1} del tag ha b8=1: manca un byte successivo`
-    if (!last && !more) return `Il byte ${i + 1} del tag ha b8=0 ma il tag continua`
+    if (last && more)
+      return t('Il byte {n} del tag ha b8=1: manca un byte successivo', { n: i + 1 })
+    if (!last && !more) return t('Il byte {n} del tag ha b8=0 ma il tag continua', { n: i + 1 })
   }
   return null
 }
@@ -140,7 +143,7 @@ export interface ParseResult {
 }
 
 export function parseTlv(hex: string): ParseResult {
-  if (!isHexBytes(hex)) throw new Error('Dati non esadecimali o con numero dispari di cifre')
+  if (!isHexBytes(hex)) throw new Error(t('Dati non esadecimali o con numero dispari di cifre'))
   const bytes = hexToBytes(hex)
   const warnings: string[] = []
   let pos = 0
@@ -149,29 +152,39 @@ export function parseTlv(hex: string): ParseResult {
     const out: TlvNode[] = []
     while (pos < end) {
       if (bytes[pos] === 0x00 || bytes[pos] === 0xff) {
-        warnings.push(`Byte di padding ${toHexByte(bytes[pos])} ignorato all'offset ${pos}`)
+        warnings.push(
+          t("Byte di padding {b} ignorato all'offset {pos}", { b: toHexByte(bytes[pos]), pos })
+        )
         pos++
         continue
       }
       const tagStart = pos
       if ((bytes[pos++] & 0x1f) === 0x1f) {
         do {
-          if (pos >= end) throw new Error(`Tag troncato all'offset ${tagStart}`)
+          if (pos >= end) throw new Error(t("Tag troncato all'offset {pos}", { pos: tagStart }))
         } while (bytes[pos++] & 0x80)
       }
       const tag = bytesToHex(bytes.slice(tagStart, pos))
-      if (pos >= end) throw new Error(`Manca la lunghezza del tag ${tag} (offset ${tagStart})`)
+      if (pos >= end)
+        throw new Error(
+          t('Manca la lunghezza del tag {tag} (offset {pos})', { tag, pos: tagStart })
+        )
       let len = bytes[pos++]
       if (len & 0x80) {
         const n = len & 0x7f
-        if (n === 0 || n > 3) throw new Error(`Lunghezza non valida per il tag ${tag}`)
-        if (pos + n > end) throw new Error(`Lunghezza troncata per il tag ${tag}`)
+        if (n === 0 || n > 3) throw new Error(t('Lunghezza non valida per il tag {tag}', { tag }))
+        if (pos + n > end) throw new Error(t('Lunghezza troncata per il tag {tag}', { tag }))
         len = 0
         for (let i = 0; i < n; i++) len = len * 256 + bytes[pos++]
       }
       if (pos + len > end) {
         throw new Error(
-          `Il tag ${tag} dichiara ${len} byte ma ne restano ${end - pos} (offset ${tagStart})`
+          t('Il tag {tag} dichiara {len} byte ma ne restano {left} (offset {pos})', {
+            tag,
+            len,
+            left: end - pos,
+            pos: tagStart
+          })
         )
       }
       const node: TlvNode = { id: newId(), tag, value: '', children: [] }
@@ -193,7 +206,7 @@ export function parseTlv(hex: string): ParseResult {
 
 /** Parses a DOL (tag + 1 byte length list). */
 export function parseDol(hex: string): { tag: string; len: number }[] {
-  if (!isHexBytes(hex)) throw new Error('DOL non esadecimale')
+  if (!isHexBytes(hex)) throw new Error(t('DOL non esadecimale'))
   const b = hexToBytes(hex)
   const out: { tag: string; len: number }[] = []
   let pos = 0
@@ -201,10 +214,10 @@ export function parseDol(hex: string): { tag: string; len: number }[] {
     const start = pos
     if ((b[pos++] & 0x1f) === 0x1f) {
       do {
-        if (pos >= b.length) throw new Error('Tag troncato nel DOL')
+        if (pos >= b.length) throw new Error(t('Tag troncato nel DOL'))
       } while (b[pos++] & 0x80)
     }
-    if (pos >= b.length) throw new Error('Manca la lunghezza nel DOL')
+    if (pos >= b.length) throw new Error(t('Manca la lunghezza nel DOL'))
     out.push({ tag: bytesToHex(b.slice(start, pos)), len: b[pos++] })
   }
   return out

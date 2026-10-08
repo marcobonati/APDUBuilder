@@ -2,8 +2,10 @@ import { BITFIELDS } from '../../emv/bitfields'
 import { byteLength, isHexBytes, normalizeHex, randomHex } from '../../emv/hex'
 import type { TagDef } from '../../emv/types'
 import BitfieldEditor from './BitfieldEditor'
+import LanguageEditor from './LanguageEditor'
 import { CompressedField, DateField, NumericField, OptionPicker, TextField } from './SimpleFields'
 import { AflEditor, CvmEditor, DolEditor, Track2Editor } from './StructuredEditors'
+import { t } from '../../i18n'
 
 interface Props {
   def: TagDef
@@ -15,11 +17,12 @@ interface Props {
 }
 
 function lengthHint(def: TagDef): string {
-  if (def.min !== undefined && def.min === def.max) return `${def.min} byte`
-  if (def.min !== undefined && def.max !== undefined) return `${def.min}–${def.max} byte`
-  if (def.max !== undefined) return `max ${def.max} byte`
-  if (def.min !== undefined) return `min ${def.min} byte`
-  return 'lunghezza variabile'
+  if (def.min !== undefined && def.min === def.max) return t('{n} byte', { n: def.min })
+  if (def.min !== undefined && def.max !== undefined)
+    return t('{min}–{max} byte', { min: def.min, max: def.max })
+  if (def.max !== undefined) return t('max {n} byte', { n: def.max })
+  if (def.min !== undefined) return t('min {n} byte', { n: def.min })
+  return t('lunghezza variabile')
 }
 
 function StructuredEditor({ def, value, onChange }: Props): React.JSX.Element | null {
@@ -44,6 +47,8 @@ function StructuredEditor({ def, value, onChange }: Props): React.JSX.Element | 
       return <CvmEditor value={value} onChange={onChange} />
     case 'track2':
       return <Track2Editor value={value} onChange={onChange} />
+    case 'langs':
+      return <LanguageEditor value={value} onChange={onChange} />
   }
   return null
 }
@@ -63,7 +68,7 @@ export default function ValueEditor(props: Props): React.JSX.Element {
       {!raw && <StructuredEditor {...props} />}
       <div className="field">
         <span className="field-label">
-          Valore HEX <span className="muted">· {lengthHint(def)}</span>
+          {t('Valore HEX')} <span className="muted">· {lengthHint(def)}</span>
         </span>
         <div className="field-row">
           {long ? (
@@ -78,7 +83,7 @@ export default function ValueEditor(props: Props): React.JSX.Element {
             <input
               className={`input mono hex ${valid ? '' : 'invalid'}`}
               value={value}
-              placeholder={example ? `es. ${example}` : 'Valore esadecimale'}
+              placeholder={example ? `${t('es.')} ${example}` : t('Valore esadecimale')}
               spellCheck={false}
               onChange={(e) => onChange(normalizeHex(e.target.value))}
             />
@@ -90,7 +95,7 @@ export default function ValueEditor(props: Props): React.JSX.Element {
         <div className="field-actions">
           {example && example !== value && (
             <button className="link-btn" onClick={() => onChange(example)}>
-              Usa esempio
+              {t('Usa esempio')}
             </button>
           )}
           {canRandom && (
@@ -98,7 +103,7 @@ export default function ValueEditor(props: Props): React.JSX.Element {
               className="link-btn"
               onClick={() => onChange(randomHex(fixedLen ?? Math.max(1, byteLength(value) || 8)))}
             >
-              Casuale
+              {t('Casuale')}
               {fixedLen
                 ? ` (${fixedLen} B)`
                 : byteLength(value)
@@ -108,7 +113,7 @@ export default function ValueEditor(props: Props): React.JSX.Element {
           )}
           {value && (
             <button className="link-btn" onClick={() => onChange('')}>
-              Svuota
+              {t('Svuota')}
             </button>
           )}
         </div>

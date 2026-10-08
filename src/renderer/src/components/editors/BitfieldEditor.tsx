@@ -1,6 +1,7 @@
 import { fieldMask, getField, setField } from '../../emv/bitfields'
 import type { BitDef, BitfieldDef } from '../../emv/bitfields'
 import { bytesToHex, hexToBytes, isHexBytes, toHexByte } from '../../emv/hex'
+import { t } from '../../i18n'
 
 interface Props {
   def: BitfieldDef
@@ -37,7 +38,7 @@ export default function BitfieldEditor({ def, value, onChange }: Props): React.J
                   <button
                     key={b}
                     className={`bf-bit ${on ? 'on' : ''} ${f ? '' : 'rfu'}`}
-                    title={f ? f.label : 'RFU'}
+                    title={f ? t(f.label) : 'RFU'}
                     onClick={() => {
                       const out = [...bytes]
                       out[bi] = byte ^ (1 << (b - 1))
@@ -63,7 +64,7 @@ export default function BitfieldEditor({ def, value, onChange }: Props): React.J
                         onChange={(e) => emit(setField(bytes, f, e.target.checked ? 1 : 0))}
                       />
                       <span className="bf-range mono">{range}</span>
-                      <span>{f.label}</span>
+                      <span>{t(f.label)}</span>
                     </label>
                   )
                 }
@@ -71,7 +72,7 @@ export default function BitfieldEditor({ def, value, onChange }: Props): React.J
                 return (
                   <label key={range} className="bf-field multi">
                     <span className="bf-range mono">{range}</span>
-                    <span>{f.label}</span>
+                    <span>{t(f.label)}</span>
                     {f.options ? (
                       <select
                         className="input small"
@@ -82,7 +83,8 @@ export default function BitfieldEditor({ def, value, onChange }: Props): React.J
                           const o = f.options?.find((x) => x.value === i)
                           return (
                             <option key={i} value={i}>
-                              {i.toString(2).padStart(f.hi - f.lo + 1, '0')} – {o?.label ?? 'RFU'}
+                              {i.toString(2).padStart(f.hi - f.lo + 1, '0')} –{' '}
+                              {o ? t(o.label) : 'RFU'}
                             </option>
                           )
                         })}

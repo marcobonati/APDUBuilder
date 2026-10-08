@@ -11,6 +11,7 @@ import {
   valueHex
 } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
+import { t } from '../i18n'
 import { useEditor } from '../state/context'
 import AddTagMenu from './AddTagMenu'
 import ValueEditor from './editors/ValueEditor'
@@ -33,7 +34,7 @@ function TagBadge({ node }: { node: TlvNode }): React.JSX.Element {
     return (
       <button
         className="tag-badge"
-        title="Clicca per cambiare il tag"
+        title={t('Clicca per cambiare il tag')}
         onClick={(e) => {
           e.stopPropagation()
           setDraft(node.tag)
@@ -127,7 +128,7 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
         {container && (
           <button
             className="caret"
-            title={node.collapsed ? 'Espandi' : 'Comprimi'}
+            title={node.collapsed ? t('Espandi') : t('Comprimi')}
             onClick={(e) => {
               e.stopPropagation()
               update({ collapsed: !node.collapsed })
@@ -139,24 +140,24 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
         <TagBadge node={node} />
         <div className="node-title">
           <div className="node-name">
-            {node.raw ? 'Dati raw (senza tag)' : def.name}
+            {node.raw ? t('Dati raw (senza tag)') : def.name}
             {node.required ? (
-              <span className="pill req">obbligatorio</span>
+              <span className="pill req">{t('obbligatorio')}</span>
             ) : (
-              !node.raw && <span className="pill opt">opzionale</span>
+              !node.raw && <span className="pill opt">{t('opzionale')}</span>
             )}
-            {node.fixed && <span className="pill fixed">valore da specifica</span>}
-            {node.concat && <span className="pill f1">formato 1 · valori concatenati</span>}
-            {inFormat1 && <span className="pill f1">senza tag/lunghezza</span>}
+            {node.fixed && <span className="pill fixed">{t('valore da specifica')}</span>}
+            {node.concat && <span className="pill f1">{t('formato 1 · valori concatenati')}</span>}
+            {inFormat1 && <span className="pill f1">{t('senza tag/lunghezza')}</span>}
           </div>
           {summary && <div className="node-summary">{summary}</div>}
         </div>
         <div className="node-meta">
-          {omitted && <span className="pill omit">vuoto · escluso dall&apos;output</span>}
+          {omitted && <span className="pill omit">{t("vuoto · escluso dall'output")}</span>}
           {!node.raw && !inFormat1 && !omitted && (
             <button
               className={`len-badge ${node.lengthOverride ? 'forced' : ''}`}
-              title="Lunghezza calcolata automaticamente. Clicca per forzarla (test negativi)."
+              title={t('Lunghezza calcolata automaticamente. Clicca per forzarla (test negativi).')}
               onClick={(e) => {
                 e.stopPropagation()
                 setShowLen(!showLen)
@@ -170,7 +171,7 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
           <div className="node-actions">
             <button
               className="icon-btn"
-              title="Sposta su"
+              title={t('Sposta su')}
               disabled={index === 0}
               onClick={() => dispatch({ type: 'move', id: node.id, dir: -1 })}
             >
@@ -178,7 +179,7 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
             </button>
             <button
               className="icon-btn"
-              title="Sposta giù"
+              title={t('Sposta giù')}
               disabled={index === count - 1}
               onClick={() => dispatch({ type: 'move', id: node.id, dir: 1 })}
             >
@@ -186,14 +187,14 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
             </button>
             <button
               className="icon-btn"
-              title="Duplica"
+              title={t('Duplica')}
               onClick={() => dispatch({ type: 'duplicate', id: node.id })}
             >
               ⧉
             </button>
             <button
               className="icon-btn danger"
-              title="Rimuovi"
+              title={t('Rimuovi')}
               onClick={() => dispatch({ type: 'remove', id: node.id })}
             >
               ×
@@ -206,8 +207,8 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
         <>
           {(def.desc || node.hint) && (
             <div className="node-desc">
-              {node.hint && <span className="hint">💡 {node.hint}. </span>}
-              {!node.raw && def.desc}
+              {node.hint && <span className="hint">💡 {t(node.hint)}. </span>}
+              {!node.raw && t(def.desc)}
             </div>
           )}
 
@@ -223,7 +224,7 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
                     })
                   }
                 />
-                Forza lunghezza manuale
+                {t('Forza lunghezza manuale')}
               </label>
               {node.lengthOverride != null && (
                 <input
@@ -233,7 +234,10 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
                 />
               )}
               <span className="muted small">
-                Automatica: {encodeLength(len)} ({len} byte). Utile solo per test negativi.
+                {t('Automatica: {hex} ({n} byte). Utile solo per test negativi.', {
+                  hex: encodeLength(len),
+                  n: len
+                })}
               </span>
             </div>
           )}
@@ -250,7 +254,9 @@ export default function NodeCard({ node, parent, index, count, depth }: Props): 
 
           {container ? (
             <div className="node-children">
-              {node.children.length === 0 && <div className="empty-children">Template vuoto</div>}
+              {node.children.length === 0 && (
+                <div className="empty-children">{t('Template vuoto')}</div>
+              )}
               {node.children.map((c, i) => (
                 <NodeCard
                   key={c.id}

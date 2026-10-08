@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import type { Dispatch } from 'react'
 import type { Action } from './store'
 import type { Issue } from '../emv/validate'
+import type { Lang } from '../i18n'
 
 export interface EditorCtx {
   dispatch: Dispatch<Action>
@@ -13,6 +14,7 @@ export interface EditorCtx {
   scrollTarget: { id: string; n: number } | null
   reveal: (id: string) => void
   issuesByNode: Map<string, Issue[]>
+  lang: Lang
 }
 
 export const EditorContext = createContext<EditorCtx | null>(null)

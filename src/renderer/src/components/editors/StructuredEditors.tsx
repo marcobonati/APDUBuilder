@@ -15,6 +15,7 @@ import { DOL_TAGS, TAGS, tagDef } from '../../emv/tags'
 import { encodeDol, parseDol, tagError } from '../../emv/tlv'
 import { normalizeHex, toHexByte } from '../../emv/hex'
 import { useSynced } from '../../hooks/useSynced'
+import { t } from '../../i18n'
 
 interface Props {
   value: string
@@ -48,7 +49,9 @@ export function DolEditor({ value, onChange }: Props): React.JSX.Element {
   const [rows, setRows] = useSynced<DolRow[] | null>(value, toRows, fromRows)
 
   if (rows === null) {
-    return <div className="field-error">DOL non interpretabile: correggi il valore in hex.</div>
+    return (
+      <div className="field-error">{t('DOL non interpretabile: correggi il valore in hex.')}</div>
+    )
   }
   const update = (next: DolRow[]): void => {
     setRows(next)
@@ -70,8 +73,8 @@ export function DolEditor({ value, onChange }: Props): React.JSX.Element {
         <thead>
           <tr>
             <th>Tag</th>
-            <th>Nome</th>
-            <th>Lungh.</th>
+            <th>{t('Nome')}</th>
+            <th>{t('Lungh.')}</th>
             <th />
           </tr>
         </thead>
@@ -113,7 +116,7 @@ export function DolEditor({ value, onChange }: Props): React.JSX.Element {
                 <td>
                   <button
                     className="icon-btn"
-                    title="Rimuovi"
+                    title={t('Rimuovi')}
                     onClick={() => update(rows.filter((_, j) => j !== i))}
                   >
                     ×
@@ -133,15 +136,17 @@ export function DolEditor({ value, onChange }: Props): React.JSX.Element {
             if (tag) update([...rows, { tag, len: defaultLen(tag) }])
           }}
         >
-          <option value="">+ Aggiungi data object…</option>
+          <option value="">{t('+ Aggiungi data object…')}</option>
           {DOL_TAGS.map((d) => (
             <option key={d.tag} value={d.tag}>
               {d.tag} – {d.name}
-              {d.source === 'terminal' ? ' (terminale)' : ''}
+              {d.source === 'terminal' ? ` (${t('terminale')})` : ''}
             </option>
           ))}
         </select>
-        <span className="muted small">Dati richiesti al terminale: {total} byte</span>
+        <span className="muted small">
+          {t('Dati richiesti al terminale: {n} byte', { n: total })}
+        </span>
       </div>
     </div>
   )
@@ -162,9 +167,9 @@ export function AflEditor({ value, onChange }: Props): React.JSX.Element {
         <thead>
           <tr>
             <th>SFI</th>
-            <th>Primo rec.</th>
-            <th>Ultimo rec.</th>
-            <th>Rec. per ODA</th>
+            <th>{t('Primo rec.')}</th>
+            <th>{t('Ultimo rec.')}</th>
+            <th>{t('Rec. per ODA')}</th>
             <th>READ RECORD</th>
             <th />
           </tr>
@@ -218,7 +223,7 @@ export function AflEditor({ value, onChange }: Props): React.JSX.Element {
                 <td>
                   <button
                     className="icon-btn"
-                    title="Rimuovi"
+                    title={t('Rimuovi')}
                     onClick={() => emit(entries.filter((_, j) => j !== i))}
                   >
                     ×
@@ -237,9 +242,11 @@ export function AflEditor({ value, onChange }: Props): React.JSX.Element {
             emit([...entries, { sfi: nextSfi, first: 1, last: 1, oda: 0 }])
           }}
         >
-          + Aggiungi gruppo di record
+          {t('+ Aggiungi gruppo di record')}
         </button>
-        <span className="muted small">Record totali da leggere: {totalRecords}</span>
+        <span className="muted small">
+          {t('Record totali da leggere: {n}', { n: totalRecords })}
+        </span>
       </div>
     </div>
   )
@@ -259,7 +266,7 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
     <div className="struct">
       <div className="field-row">
         <label className="field inline">
-          <span className="field-label">Importo X</span>
+          <span className="field-label">{t('Importo X')}</span>
           <input
             type="number"
             className="input small num wide"
@@ -269,7 +276,7 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
           />
         </label>
         <label className="field inline">
-          <span className="field-label">Importo Y</span>
+          <span className="field-label">{t('Importo Y')}</span>
           <input
             type="number"
             className="input small num wide"
@@ -278,15 +285,15 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
             onChange={(e) => emit({ y: Math.max(0, parseInt(e.target.value, 10) || 0) })}
           />
         </label>
-        <span className="muted small">in unità minime della valuta applicazione</span>
+        <span className="muted small">{t('in unità minime della valuta applicazione')}</span>
       </div>
       <table className="struct-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>Metodo CVM</th>
-            <th>Se fallisce, prova la successiva</th>
-            <th>Condizione</th>
+            <th>{t('Metodo CVM')}</th>
+            <th>{t('Se fallisce, prova la successiva')}</th>
+            <th>{t('Condizione')}</th>
             <th />
           </tr>
         </thead>
@@ -301,11 +308,13 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
                   onChange={(e) => setRule(i, { method: Number(e.target.value) })}
                 >
                   {!CVM_METHODS.some((m) => m.value === r.method) && (
-                    <option value={r.method}>{toHexByte(r.method)} – proprietario/RFU</option>
+                    <option value={r.method}>
+                      {toHexByte(r.method)} – {t('proprietario/RFU')}
+                    </option>
                   )}
                   {CVM_METHODS.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {toHexByte(m.value)} – {m.label}
+                      {toHexByte(m.value)} – {t(m.label)}
                     </option>
                   ))}
                 </select>
@@ -324,11 +333,13 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
                   onChange={(e) => setRule(i, { condition: Number(e.target.value) })}
                 >
                   {!CVM_CONDITIONS.some((c) => c.value === r.condition) && (
-                    <option value={r.condition}>{toHexByte(r.condition)} – proprietaria/RFU</option>
+                    <option value={r.condition}>
+                      {toHexByte(r.condition)} – {t('proprietaria/RFU')}
+                    </option>
                   )}
                   {CVM_CONDITIONS.map((c) => (
                     <option key={c.value} value={c.value}>
-                      {toHexByte(c.value)} – {c.label}
+                      {toHexByte(c.value)} – {t(c.label)}
                     </option>
                   ))}
                 </select>
@@ -336,7 +347,7 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
               <td>
                 <button
                   className="icon-btn"
-                  title="Rimuovi"
+                  title={t('Rimuovi')}
                   onClick={() => emit({ rules: cvm.rules.filter((_, j) => j !== i) })}
                 >
                   ×
@@ -354,7 +365,7 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
           })
         }
       >
-        + Aggiungi regola CVM
+        {t('+ Aggiungi regola CVM')}
       </button>
     </div>
   )
@@ -363,16 +374,16 @@ export function CvmEditor({ value, onChange }: Props): React.JSX.Element {
 // ---------------- Track 2 ----------------
 
 export function Track2Editor({ value, onChange }: Props): React.JSX.Element {
-  const fromLocal = (t: Track2): string | null =>
-    /^\d*$/.test(t.pan + t.expiry + t.serviceCode + t.discretionary) ? encodeTrack2(t) : null
-  const [t, setT] = useSynced<Track2>(value, parseTrack2, fromLocal)
+  const fromLocal = (tk: Track2): string | null =>
+    /^\d*$/.test(tk.pan + tk.expiry + tk.serviceCode + tk.discretionary) ? encodeTrack2(tk) : null
+  const [tk, setTk] = useSynced<Track2>(value, parseTrack2, fromLocal)
   const set = (patch: Partial<Track2>): void => {
-    const next = { ...t, ...patch }
-    setT(next)
+    const next = { ...tk, ...patch }
+    setTk(next)
     const h = fromLocal(next)
     if (h !== null) onChange(h)
   }
-  const panOk = t.pan === '' || luhnValid(t.pan)
+  const panOk = tk.pan === '' || luhnValid(tk.pan)
 
   return (
     <div className="struct track2">
@@ -380,17 +391,17 @@ export function Track2Editor({ value, onChange }: Props): React.JSX.Element {
         <span className="field-label">PAN</span>
         <input
           className={`input mono ${panOk ? '' : 'invalid'}`}
-          value={t.pan}
+          value={tk.pan}
           maxLength={19}
           onChange={(e) => set({ pan: e.target.value })}
         />
-        {!panOk && <span className="field-error">Controllo Luhn fallito</span>}
+        {!panOk && <span className="field-error">{t('Controllo Luhn fallito')}</span>}
       </label>
       <label className="field">
-        <span className="field-label">Scadenza (YYMM)</span>
+        <span className="field-label">{t('Scadenza (YYMM)')}</span>
         <input
           className="input mono"
-          value={t.expiry}
+          value={tk.expiry}
           maxLength={4}
           placeholder="2712"
           onChange={(e) => set({ expiry: e.target.value })}
@@ -400,17 +411,17 @@ export function Track2Editor({ value, onChange }: Props): React.JSX.Element {
         <span className="field-label">Service code</span>
         <input
           className="input mono"
-          value={t.serviceCode}
+          value={tk.serviceCode}
           maxLength={3}
           placeholder="201"
           onChange={(e) => set({ serviceCode: e.target.value })}
         />
       </label>
       <label className="field grow">
-        <span className="field-label">Dati discrezionali</span>
+        <span className="field-label">{t('Dati discrezionali')}</span>
         <input
           className="input mono"
-          value={t.discretionary}
+          value={tk.discretionary}
           onChange={(e) => set({ discretionary: e.target.value })}
         />
       </label>

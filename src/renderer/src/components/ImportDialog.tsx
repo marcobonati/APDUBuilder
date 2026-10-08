@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { cleanPastedHex, isHexBytes } from '../emv/hex'
 import { parseTlv } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
+import { t } from '../i18n'
 
 interface Props {
   onClose: () => void
@@ -21,7 +22,9 @@ export default function ImportDialog({ onClose, onImport }: Props): React.JSX.El
 
   const run = (): void => {
     if (!isHexBytes(hex)) {
-      setError('Il testo non è esadecimale valido (numero di cifre dispari o caratteri non hex).')
+      setError(
+        t('Il testo non è esadecimale valido (numero di cifre dispari o caratteri non hex).')
+      )
       return
     }
     const data = swOn && hex.length >= 4 ? hex.slice(0, -4) : hex
@@ -37,10 +40,11 @@ export default function ImportDialog({ onClose, onImport }: Props): React.JSX.El
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <h2>Importa response da hex</h2>
+        <h2>{t('Importa response da hex')}</h2>
         <p className="muted small">
-          Incolla una response esistente (spazi, 0x e virgole vengono ignorati). Verrà scomposta in
-          TLV e potrai modificarla con l&apos;editor guidato.
+          {t(
+            "Incolla una response esistente (spazi, 0x e virgole vengono ignorati). Verrà scomposta in TLV e potrai modificarla con l'editor guidato."
+          )}
         </p>
         <textarea
           autoFocus
@@ -54,17 +58,17 @@ export default function ImportDialog({ onClose, onImport }: Props): React.JSX.El
           }}
         />
         <label className="small">
-          <input type="checkbox" checked={swOn} onChange={(e) => setHasSw(e.target.checked)} /> Gli
-          ultimi 2 byte sono la Status Word{' '}
+          <input type="checkbox" checked={swOn} onChange={(e) => setHasSw(e.target.checked)} />{' '}
+          {t('Gli ultimi 2 byte sono la Status Word')}{' '}
           {hex.length >= 4 && swOn && <span className="mono">({hex.slice(-4)})</span>}
         </label>
         {error && <div className="field-error">{error}</div>}
         <div className="modal-actions">
           <button className="btn" onClick={onClose}>
-            Annulla
+            {t('Annulla')}
           </button>
           <button className="btn primary" disabled={!hex} onClick={run}>
-            Importa
+            {t('Importa')}
           </button>
         </div>
       </div>

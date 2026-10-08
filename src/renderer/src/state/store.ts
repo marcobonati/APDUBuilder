@@ -1,21 +1,42 @@
 import { newId } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
+import { t } from '../i18n'
 
+/** Content of a single response being designed. */
 export interface Doc {
   templateId: string
   nodes: TlvNode[]
   sw: string
 }
 
-export interface State extends Doc {
-  past: Doc[]
-  future: Doc[]
+export interface ResponseDoc extends Doc {
+  id: string
+  name: string
+  /** False until the user edits it: an untouched response is replaced by a new template. */
+  touched?: boolean
+}
+
+export interface Project {
+  name: string
+  responses: ResponseDoc[]
+  activeId: string
+}
+
+export interface State {
+  project: Project
+  /** File the project was loaded from / saved to. */
+  filePath: string | null
+  /** Project as last saved or opened; null when it was never saved. */
+  savedProject: Project | null
+  past: Project[]
+  future: Project[]
   /** Id of the node edited by the last update, to merge keystrokes in one undo step. */
   lastEdit: string | null
 }
 
 export type Action =
-  | { type: 'load'; doc: Doc }
+  // Active response content
+  | { type: 'load'; doc: Doc; name: string }
   | { type: 'update'; id: string; patch: Partial<TlvNode> }
   | { type: 'add'; parentId: string | null; node: TlvNode }
   | { type: 'remove'; id: string }
@@ -26,6 +47,16 @@ export type Action =
   | { type: 'clearValues' }
   | { type: 'setCollapsed'; collapsed: boolean }
   | { type: 'reveal'; id: string }
+  // Project
+  | { type: 'addResponse'; doc: Doc; name: string }
+  | { type: 'selectResponse'; id: string }
+  | { type: 'renameResponse'; id: string; name: string }
+  | { type: 'duplicateResponse'; id: string }
+  | { type: 'deleteResponse'; id: string }
+  | { type: 'moveResponse'; id: string; dir: -1 | 1 }
+  | { type: 'renameProject'; name: string }
+  | { type: 'openProject'; project: Project; filePath: string | null }
+  | { type: 'saved'; filePath: string | null }
   | { type: 'undo' }
   | { type: 'redo' }
 
@@ -48,110 +79,230 @@ export function findNode(list: TlvNode[], id: string): TlvNode | null {
 }
 
 /** Applies fn to the sibling list that contains id. */
-function editSiblings(
-  list: TlvNode[],
+function editSiblings<T extends { id: string; children?: T[] }>(
+  list: T[],
   id: string,
-  fn: (siblings: TlvNode[], i: number) => TlvNode[]
-): TlvNode[] {
+  fn: (siblings: T[], i: number) => T[]
+): T[] {
   const i = list.findIndex((n) => n.id === id)
   if (i >= 0) return fn(list, i)
   return list.map((n) =>
-    n.children.length ? { ...n, children: editSiblings(n.children, id, fn) } : n
+    n.children?.length ? { ...n, children: editSiblings(n.children, id, fn) } : n
   )
+}
+
+function swap<T>(l: T[], i: number, dir: -1 | 1): T[] {
+  const j = i + dir
+  if (j < 0 || j >= l.length) return l
+  const out = [...l]
+  ;[out[i], out[j]] = [out[j], out[i]]
+  return out
 }
 
 function cloneWithNewIds(n: TlvNode): TlvNode {
   return { ...n, id: newId(), children: n.children.map(cloneWithNewIds) }
 }
 
-function snapshot(s: State): Doc {
-  return { templateId: s.templateId, nodes: s.nodes, sw: s.sw }
+export function activeResponse(p: Project): ResponseDoc {
+  return p.responses.find((r) => r.id === p.activeId) ?? p.responses[0]
 }
 
-function commit(s: State, doc: Partial<Doc>, lastEdit: string | null = null): State {
+export function newResponse(doc: Doc, name: string): ResponseDoc {
+  return { ...doc, id: newId(), name }
+}
+
+export function newProject(doc: Doc, name: string): Project {
+  const r = newResponse(doc, name)
+  return { name: t('Nuovo progetto'), responses: [r], activeId: r.id }
+}
+
+export function isDirty(s: State): boolean {
+  return s.project !== s.savedProject
+}
+
+function commit(s: State, project: Project, lastEdit: string | null = null): State {
   const merge = lastEdit !== null && lastEdit === s.lastEdit
   return {
     ...s,
-    ...doc,
-    past: merge ? s.past : [...s.past.slice(-HISTORY + 1), snapshot(s)],
+    project,
+    past: merge ? s.past : [...s.past.slice(-HISTORY + 1), s.project],
     future: [],
     lastEdit
   }
 }
 
+/** Commits a change to the content of the active response. */
+function editActive(
+  s: State,
+  fn: (r: ResponseDoc) => Partial<ResponseDoc>,
+  lastEdit: string | null = null
+): State {
+  const p = s.project
+  const active = activeResponse(p)
+  const responses = p.responses.map((r) =>
+    r.id === active.id ? { ...r, ...fn(r), touched: true } : r
+  )
+  return commit(s, { ...p, responses }, lastEdit ? `${active.id}:${lastEdit}` : null)
+}
+
+/** View-only changes (collapse state) that do not deserve an undo step. */
+function viewActive(s: State, fn: (nodes: TlvNode[]) => TlvNode[]): State {
+  const p = s.project
+  const active = activeResponse(p)
+  const responses = p.responses.map((r) => (r.id === active.id ? { ...r, nodes: fn(r.nodes) } : r))
+  // Keep the saved reference in sync so that folding does not mark the project dirty.
+  const clean = s.savedProject === p
+  const project = { ...p, responses }
+  return { ...s, project, savedProject: clean ? project : s.savedProject }
+}
+
 export function reducer(s: State, a: Action): State {
+  const p = s.project
   switch (a.type) {
-    case 'load':
-      return commit(s, a.doc)
+    case 'load': {
+      // Replaces the active response when it is still untouched, otherwise adds a new one.
+      const active = activeResponse(p)
+      if (!active.touched) {
+        const responses = p.responses.map((r) =>
+          r.id === active.id ? { ...r, ...a.doc, name: a.name } : r
+        )
+        return commit(s, { ...p, responses })
+      }
+      return reducer(s, { type: 'addResponse', doc: a.doc, name: a.name })
+    }
     case 'update':
-      return commit(
+      return editActive(
         s,
-        {
-          nodes: mapTree(s.nodes, (n) => (n.id === a.id ? { ...n, ...a.patch } : n))
-        },
+        (r) => ({ nodes: mapTree(r.nodes, (n) => (n.id === a.id ? { ...n, ...a.patch } : n)) }),
         a.id
       )
     case 'add':
-      if (a.parentId === null) return commit(s, { nodes: [...s.nodes, a.node] })
-      return commit(s, {
-        nodes: mapTree(s.nodes, (n) =>
-          n.id === a.parentId ? { ...n, collapsed: false, children: [...n.children, a.node] } : n
-        )
-      })
+      return editActive(s, (r) => ({
+        nodes:
+          a.parentId === null
+            ? [...r.nodes, a.node]
+            : mapTree(r.nodes, (n) =>
+                n.id === a.parentId
+                  ? { ...n, collapsed: false, children: [...n.children, a.node] }
+                  : n
+              )
+      }))
     case 'remove':
-      return commit(s, {
-        nodes: editSiblings(s.nodes, a.id, (l, i) => l.filter((_, j) => j !== i))
-      })
+      return editActive(s, (r) => ({
+        nodes: editSiblings(r.nodes, a.id, (l, i) => l.filter((_, j) => j !== i))
+      }))
     case 'move':
-      return commit(s, {
-        nodes: editSiblings(s.nodes, a.id, (l, i) => {
-          const j = i + a.dir
-          if (j < 0 || j >= l.length) return l
-          const out = [...l]
-          ;[out[i], out[j]] = [out[j], out[i]]
-          return out
-        })
-      })
+      return editActive(s, (r) => ({
+        nodes: editSiblings(r.nodes, a.id, (l, i) => swap(l, i, a.dir))
+      }))
     case 'duplicate':
-      return commit(s, {
-        nodes: editSiblings(s.nodes, a.id, (l, i) => [
+      return editActive(s, (r) => ({
+        nodes: editSiblings(r.nodes, a.id, (l, i) => [
           ...l.slice(0, i + 1),
           cloneWithNewIds(l[i]),
           ...l.slice(i + 1)
         ])
-      })
+      }))
     case 'setSw':
-      return commit(s, { sw: a.sw }, 'sw')
+      return editActive(s, () => ({ sw: a.sw }), 'sw')
     case 'fillExamples':
-      return commit(s, {
-        nodes: mapTree(s.nodes, (n) => (!n.value && n.example ? { ...n, value: n.example } : n))
-      })
+      return editActive(s, (r) => ({
+        nodes: mapTree(r.nodes, (n) => (!n.value && n.example ? { ...n, value: n.example } : n))
+      }))
     case 'clearValues':
-      return commit(s, {
-        nodes: mapTree(s.nodes, (n) => (n.fixed ? n : { ...n, value: '' }))
-      })
+      return editActive(s, (r) => ({
+        nodes: mapTree(r.nodes, (n) => (n.fixed ? n : { ...n, value: '' }))
+      }))
     case 'setCollapsed':
-      return {
-        ...s,
-        nodes: mapTree(s.nodes, (n) => (n.children.length ? { ...n, collapsed: a.collapsed } : n))
-      }
+      return viewActive(s, (nodes) =>
+        mapTree(nodes, (n) => (n.children.length ? { ...n, collapsed: a.collapsed } : n))
+      )
     case 'reveal':
-      return {
-        ...s,
-        nodes: mapTree(s.nodes, (n) =>
+      return viewActive(s, (nodes) =>
+        mapTree(nodes, (n) =>
           n.collapsed && n.id !== a.id && findNode(n.children, a.id)
             ? { ...n, collapsed: false }
             : n
         )
+      )
+
+    case 'addResponse': {
+      const r = newResponse(a.doc, a.name)
+      const i = p.responses.findIndex((x) => x.id === p.activeId)
+      const responses = [...p.responses.slice(0, i + 1), r, ...p.responses.slice(i + 1)]
+      return commit(s, { ...p, responses, activeId: r.id })
+    }
+    case 'selectResponse': {
+      if (a.id === p.activeId) return s
+      // Switching is not an edit: keep the saved reference when the project was clean.
+      const project = { ...p, activeId: a.id }
+      return {
+        ...s,
+        project,
+        savedProject: s.savedProject === p ? project : s.savedProject,
+        lastEdit: null
       }
+    }
+    case 'renameResponse':
+      return commit(
+        s,
+        {
+          ...p,
+          responses: p.responses.map((r) =>
+            r.id === a.id ? { ...r, name: a.name, touched: true } : r
+          )
+        },
+        `name:${a.id}`
+      )
+    case 'duplicateResponse': {
+      const i = p.responses.findIndex((r) => r.id === a.id)
+      if (i < 0) return s
+      const src = p.responses[i]
+      const copy: ResponseDoc = {
+        ...src,
+        id: newId(),
+        name: `${src.name} (${t('copia')})`,
+        nodes: src.nodes.map(cloneWithNewIds),
+        touched: true
+      }
+      const responses = [...p.responses.slice(0, i + 1), copy, ...p.responses.slice(i + 1)]
+      return commit(s, { ...p, responses, activeId: copy.id })
+    }
+    case 'deleteResponse': {
+      if (p.responses.length <= 1) return s
+      const i = p.responses.findIndex((r) => r.id === a.id)
+      const responses = p.responses.filter((r) => r.id !== a.id)
+      const activeId =
+        p.activeId === a.id ? responses[Math.min(i, responses.length - 1)].id : p.activeId
+      return commit(s, { ...p, responses, activeId })
+    }
+    case 'moveResponse':
+      return commit(s, {
+        ...p,
+        responses: editSiblings(p.responses, a.id, (l, i) => swap(l, i, a.dir))
+      })
+    case 'renameProject':
+      return commit(s, { ...p, name: a.name }, 'project-name')
+    case 'openProject':
+      return {
+        project: a.project,
+        filePath: a.filePath,
+        savedProject: a.project,
+        past: [],
+        future: [],
+        lastEdit: null
+      }
+    case 'saved':
+      return { ...s, filePath: a.filePath, savedProject: p, lastEdit: null }
+
     case 'undo': {
       const prev = s.past[s.past.length - 1]
       if (!prev) return s
       return {
         ...s,
-        ...prev,
+        project: prev,
         past: s.past.slice(0, -1),
-        future: [snapshot(s), ...s.future],
+        future: [p, ...s.future],
         lastEdit: null
       }
     }
@@ -160,8 +311,8 @@ export function reducer(s: State, a: Action): State {
       if (!next) return s
       return {
         ...s,
-        ...next,
-        past: [...s.past, snapshot(s)],
+        project: next,
+        past: [...s.past, p],
         future: s.future.slice(1),
         lastEdit: null
       }
@@ -169,22 +320,41 @@ export function reducer(s: State, a: Action): State {
   }
 }
 
-const STORAGE_KEY = 'emv-apdu-builder:doc:v1'
+// ---------------- Session autosave ----------------
 
-export function loadSaved(): Doc | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const doc = JSON.parse(raw) as Doc
-    return Array.isArray(doc.nodes) && typeof doc.sw === 'string' ? doc : null
-  } catch {
-    return null
-  }
+const STORAGE_KEY = 'emv-apdu-builder:session:v2'
+const LEGACY_KEY = 'emv-apdu-builder:doc:v1'
+
+interface Session {
+  project: Project
+  filePath: string | null
+  dirty: boolean
 }
 
-export function saveDoc(doc: Doc): void {
+export function loadSession(): Session | null {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(doc))
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const s = JSON.parse(raw) as Session
+      if (s.project?.responses?.length) return s
+    }
+    // Single document saved by the previous version.
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (legacy) {
+      const doc = JSON.parse(legacy) as Doc
+      if (Array.isArray(doc.nodes) && typeof doc.sw === 'string') {
+        return { project: newProject(doc, 'Response'), filePath: null, dirty: true }
+      }
+    }
+  } catch {
+    // Corrupted or unavailable storage: start from scratch.
+  }
+  return null
+}
+
+export function saveSession(s: Session): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
   } catch {
     // Storage not available: autosave is only a convenience.
   }

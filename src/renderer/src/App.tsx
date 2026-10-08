@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import AddTagMenu from './components/AddTagMenu'
 import ImportDialog from './components/ImportDialog'
 import NodeCard from './components/NodeCard'
@@ -9,60 +9,180 @@ import type { ResponseTemplate } from './emv/templates'
 import { encodeNodes } from './emv/tlv'
 import { progress, validate } from './emv/validate'
 import type { Issue } from './emv/validate'
+import { initialLang, setLang, t } from './i18n'
+import type { Lang } from './i18n'
 import { EditorContext } from './state/context'
 import type { EditorCtx } from './state/context'
-import { loadSaved, reducer, saveDoc } from './state/store'
+import { baseName, parseProject, serializeProject } from './state/projectFile'
+import { notifyDirty, openProjectFile, saveProjectFile } from './state/projectIO'
+import {
+  activeResponse,
+  isDirty,
+  loadSession,
+  newProject,
+  reducer,
+  saveSession
+} from './state/store'
 import type { Doc, State } from './state/store'
 
-function docFromTemplate(t: ResponseTemplate): Doc {
-  return { templateId: t.id, nodes: buildNodes(t.root), sw: t.sw ?? '9000' }
+function docFromTemplate(tpl: ResponseTemplate): Doc {
+  return { templateId: tpl.id, nodes: buildNodes(tpl.root), sw: tpl.sw ?? '9000' }
+}
+
+function freshProject(): ReturnType<typeof newProject> {
+  return newProject(docFromTemplate(TEMPLATES[0]), t(TEMPLATES[0].name))
 }
 
 function init(): State {
-  const doc = loadSaved() ?? docFromTemplate(TEMPLATES[0])
-  return { ...doc, past: [], future: [], lastEdit: null }
+  const session = loadSession()
+  const project = session?.project ?? freshProject()
+  return {
+    project,
+    filePath: session?.filePath ?? null,
+    savedProject: session?.dirty ? null : project,
+    past: [],
+    future: [],
+    lastEdit: null
+  }
+}
+
+interface Toast {
+  text: string
+  kind: 'ok' | 'error'
 }
 
 function App(): React.JSX.Element {
+  // Set before the reducer initializer, which may create a project with translated names.
+  const [lang, setLangState] = useState<Lang>(() => {
+    const l = initialLang()
+    setLang(l)
+    return l
+  })
   const [state, dispatch] = useReducer(reducer, undefined, init)
   const [hovered, setHovered] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
-  const [scrollTarget, setScrollTarget] = useState<{
-    id: string
-    n: number
-  } | null>(null)
+  const [scrollTarget, setScrollTarget] = useState<{ id: string; n: number } | null>(null)
   const [importing, setImporting] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
 
-  const encoded = useMemo(() => encodeNodes(state.nodes), [state.nodes])
+  const active = activeResponse(state.project)
+  const dirty = isDirty(state)
+
+  const encoded = useMemo(() => encodeNodes(active.nodes), [active.nodes])
   const issues = useMemo(
-    () => validate(state.nodes, state.sw, encoded.hex.length / 2),
-    [state.nodes, state.sw, encoded]
+    () => validate(active.nodes, active.sw, encoded.hex.length / 2),
+    // lang: issue messages are translated when generated.
+    [active.nodes, active.sw, encoded, lang] // eslint-disable-line react-hooks/exhaustive-deps
   )
   const issuesByNode = useMemo(() => {
     const m = new Map<string, Issue[]>()
     for (const i of issues) if (i.nodeId) m.set(i.nodeId, [...(m.get(i.nodeId) ?? []), i])
     return m
   }, [issues])
-  const prog = useMemo(() => progress(state.nodes), [state.nodes])
+  const prog = useMemo(() => progress(active.nodes), [active.nodes])
 
   useEffect(() => {
     const t = setTimeout(
-      () =>
-        saveDoc({
-          templateId: state.templateId,
-          nodes: state.nodes,
-          sw: state.sw
-        }),
+      () => saveSession({ project: state.project, filePath: state.filePath, dirty }),
       300
     )
     return () => clearTimeout(t)
-  }, [state.templateId, state.nodes, state.sw])
+  }, [state.project, state.filePath, dirty])
+
+  useEffect(() => {
+    notifyDirty(dirty)
+    const file = state.filePath ? ` — ${baseName(state.filePath)}.emvproj` : ''
+    document.title = `${dirty ? '• ' : ''}${state.project.name}${file} · EMV APDU Builder`
+  }, [dirty, state.project.name, state.filePath])
+
+  const showToast = useCallback((text: string, kind: Toast['kind'] = 'ok') => {
+    setToast({ text, kind })
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), toast.kind === 'error' ? 6000 : 2500)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  // ---------------- Project commands ----------------
+
+  const confirmDiscard = useCallback(
+    (): boolean =>
+      !dirty ||
+      window.confirm(
+        t('Il progetto corrente ha modifiche non salvate. Vuoi continuare e perderle?')
+      ),
+    [dirty]
+  )
+
+  const save = useCallback(
+    async (saveAs: boolean): Promise<void> => {
+      try {
+        const path = await saveProjectFile(
+          serializeProject(state.project),
+          saveAs ? null : state.filePath,
+          state.filePath ? baseName(state.filePath) : state.project.name || t('progetto')
+        )
+        if (path === null) return
+        dispatch({ type: 'saved', filePath: path || state.filePath })
+        showToast(path ? t('Progetto salvato in {path}', { path }) : t('Progetto scaricato'))
+      } catch (e) {
+        showToast(`${t('Salvataggio non riuscito')}: ${(e as Error).message}`, 'error')
+      }
+    },
+    [state.project, state.filePath, showToast]
+  )
+
+  const open = useCallback(async (): Promise<void> => {
+    if (!confirmDiscard()) return
+    try {
+      const file = await openProjectFile()
+      if (!file) return
+      const project = parseProject(file.content)
+      dispatch({ type: 'openProject', project, filePath: file.path })
+      showToast(
+        t('Aperto "{name}" ({n} response)', { name: project.name, n: project.responses.length })
+      )
+    } catch (e) {
+      showToast(`${t('Impossibile aprire il progetto')}: ${(e as Error).message}`, 'error')
+    }
+  }, [confirmDiscard, showToast])
+
+  const createNew = useCallback((): void => {
+    if (!confirmDiscard()) return
+    dispatch({ type: 'openProject', project: freshProject(), filePath: null })
+  }, [confirmDiscard])
+
+  // Latest commands for the global key handler, registered once.
+  const commands = useRef({ save, open, createNew })
+  useEffect(() => {
+    commands.current = { save, open, createNew }
+  }, [save, open, createNew])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      const mod = e.metaKey || e.ctrlKey
+      if (!mod) return
+      const key = e.key.toLowerCase()
+      if (key === 's') {
+        e.preventDefault()
+        commands.current.save(e.shiftKey)
+        return
+      }
+      if (key === 'o') {
+        e.preventDefault()
+        commands.current.open()
+        return
+      }
+      if (key === 'n') {
+        e.preventDefault()
+        commands.current.createNew()
+        return
+      }
       const target = e.target as HTMLElement
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      if (key === 'z') {
         e.preventDefault()
         dispatch({ type: e.shiftKey ? 'redo' : 'undo' })
       }
@@ -86,80 +206,100 @@ function App(): React.JSX.Element {
       setSelected,
       scrollTarget,
       reveal,
-      issuesByNode
+      issuesByNode,
+      lang
     }),
-    [hovered, selected, scrollTarget, reveal, issuesByNode]
+    [hovered, selected, scrollTarget, reveal, issuesByNode, lang]
   )
 
-  const template = TEMPLATES.find((t) => t.id === state.templateId)
+  const template = TEMPLATES.find((tpl) => tpl.id === active.templateId)
   const pct = prog.total ? Math.round((prog.filled / prog.total) * 100) : 100
 
   return (
     <EditorContext.Provider value={ctx}>
       <div className="app">
         <Sidebar
-          current={state.templateId}
-          onSelect={(t) => dispatch({ type: 'load', doc: docFromTemplate(t) })}
+          project={state.project}
+          filePath={state.filePath}
+          dirty={dirty}
+          onSelectTemplate={(tpl) =>
+            dispatch({ type: 'load', doc: docFromTemplate(tpl), name: t(tpl.name) })
+          }
           onImport={() => setImporting(true)}
+          onNew={createNew}
+          onOpen={open}
+          onSave={() => save(false)}
+          onSaveAs={() => save(true)}
+          onLang={(l) => {
+            setLang(l)
+            setLangState(l)
+          }}
         />
 
         <main className="editor">
           <header className="editor-head">
             <div className="editor-title">
-              <h1>{template ? `${template.name} – response` : 'Response importata'}</h1>
+              <h1>{active.name}</h1>
               <p className="muted">
-                {template?.description ??
-                  'Response ricostruita da dati esadecimali. Puoi modificare, aggiungere o rimuovere tag.'}
+                <span className="pill">
+                  {template ? `Template: ${t(template.name)}` : t('Response importata')}
+                </span>{' '}
+                {template
+                  ? t(template.description)
+                  : t(
+                      'Response ricostruita da dati esadecimali. Puoi modificare, aggiungere o rimuovere tag.'
+                    )}
               </p>
               {template && template.command.apdu && (
                 <div className="command">
                   <span className="muted small">
-                    Comando di riferimento · {template.command.name}
+                    {t('Comando di riferimento')} · {t(template.command.name)}
                   </span>
                   <code className="mono">{template.command.apdu}</code>
                   {template.command.note && (
-                    <span className="muted small">{template.command.note}</span>
+                    <span className="muted small">{t(template.command.note)}</span>
                   )}
                 </div>
               )}
             </div>
             <div className="toolbar">
-              <div className="progress" title="Campi obbligatori compilati">
+              <div className="progress" title={t('Campi obbligatori compilati')}>
                 <div className="progress-bar">
                   <div className="progress-fill" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="small">
-                  {prog.total > 0 && `${prog.filled}/${prog.total} obbligatori · `}
-                  {prog.optionalFilled} opzionali compilati
+                  {prog.total > 0 &&
+                    `${t('{n}/{total} obbligatori', { n: prog.filled, total: prog.total })} · `}
+                  {t('{n} opzionali compilati', { n: prog.optionalFilled })}
                 </span>
               </div>
               <div className="toolbar-buttons">
                 <button
                   className="btn small"
                   onClick={() => dispatch({ type: 'fillExamples' })}
-                  title="Riempie i campi vuoti con valori di esempio"
+                  title={t('Riempie i campi vuoti con valori di esempio')}
                 >
-                  ✨ Compila con esempi
+                  ✨ {t('Compila con esempi')}
                 </button>
                 <button className="btn small" onClick={() => dispatch({ type: 'clearValues' })}>
-                  Svuota valori
+                  {t('Svuota valori')}
                 </button>
                 <button
                   className="btn small"
                   onClick={() => dispatch({ type: 'setCollapsed', collapsed: false })}
                 >
-                  Espandi
+                  {t('Espandi')}
                 </button>
                 <button
                   className="btn small"
                   onClick={() => dispatch({ type: 'setCollapsed', collapsed: true })}
                 >
-                  Comprimi
+                  {t('Comprimi')}
                 </button>
                 <button
                   className="btn small"
                   disabled={!state.past.length}
-                  title="Annulla (⌘Z)"
+                  title={`${t('Annulla')} (⌘Z)`}
                   onClick={() => dispatch({ type: 'undo' })}
                 >
                   ↶
@@ -167,7 +307,7 @@ function App(): React.JSX.Element {
                 <button
                   className="btn small"
                   disabled={!state.future.length}
-                  title="Ripeti (⇧⌘Z)"
+                  title={`${t('Ripeti')} (⇧⌘Z)`}
                   onClick={() => dispatch({ type: 'redo' })}
                 >
                   ↷
@@ -177,20 +317,24 @@ function App(): React.JSX.Element {
           </header>
 
           <div className="tree" onMouseLeave={() => setHovered(null)}>
-            {state.nodes.length === 0 && (
+            {active.nodes.length === 0 && (
               <div className="empty-state">
-                {state.sw !== '9000'
-                  ? `Response senza dati: verrà inviata solo la Status Word ${state.sw}.`
-                  : 'Nessun tag. Aggiungi un template radice (es. 6F, 70, 77) o importa una response.'}
+                {active.sw !== '9000'
+                  ? t('Response senza dati: verrà inviata solo la Status Word {sw}.', {
+                      sw: active.sw
+                    })
+                  : t(
+                      'Nessun tag. Aggiungi un template radice (es. 6F, 70, 77) o importa una response.'
+                    )}
               </div>
             )}
-            {state.nodes.map((n, i) => (
+            {active.nodes.map((n, i) => (
               <NodeCard
                 key={n.id}
                 node={n}
                 parent={null}
                 index={i}
-                count={state.nodes.length}
+                count={active.nodes.length}
                 depth={0}
               />
             ))}
@@ -201,7 +345,7 @@ function App(): React.JSX.Element {
           </div>
         </main>
 
-        <RawPanel nodes={state.nodes} encoded={encoded} sw={state.sw} issues={issues} />
+        <RawPanel nodes={active.nodes} encoded={encoded} sw={active.sw} issues={issues} />
       </div>
 
       {importing && (
@@ -209,12 +353,19 @@ function App(): React.JSX.Element {
           onClose={() => setImporting(false)}
           onImport={(nodes, sw) => {
             dispatch({
-              type: 'load',
-              doc: { templateId: 'import', nodes, sw }
+              type: 'addResponse',
+              doc: { templateId: 'import', nodes, sw },
+              name: t('Response importata')
             })
             setImporting(false)
           }}
         />
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.kind}`} onClick={() => setToast(null)}>
+          {toast.text}
+        </div>
       )}
     </EditorContext.Provider>
   )
