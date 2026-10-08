@@ -16,7 +16,11 @@ import { TEMPLATES } from '../emv/templates'
 import { hasChildren, isConstructedTag, parseDol, tagError, valueHex } from '../emv/tlv'
 import type { TagDef, TlvNode } from '../emv/types'
 import { t } from '../i18n'
+import { useEditor } from '../state/context'
 import type { HelpTarget } from '../state/context'
+import { LabelChip } from './Labels'
+import { nodeLabels } from '../state/labels'
+import { NoteView } from './NoteEditor'
 import { FORMAT_HELP, TAG_CLASSES } from '../emv/helpFormats'
 
 interface Props {
@@ -305,6 +309,7 @@ export default function HelpPanel({
   onToggleLock,
   onClose
 }: Props): React.JSX.Element {
+  const { labels } = useEditor()
   const found = target?.nodeId ? findWithParent(nodes, target.nodeId) : null
   const node = found?.node ?? null
   const tag = node ? node.tag : (target?.tag ?? '')
@@ -318,6 +323,7 @@ export default function HelpPanel({
   const value = node && !hasChildren(node) ? node.value : ''
   const decoded = value ? describeValue(def, value) : ''
   const inFormat1 = found?.parent?.concat === true
+  const applied = node ? nodeLabels(node, labels) : []
 
   const header = (
     <div className="help-head">
@@ -406,6 +412,19 @@ export default function HelpPanel({
 
         {def.desc && <p className="help-lead">{t(def.desc)}</p>}
         {node?.hint && <p className="hint">💡 {t(node.hint)}</p>}
+
+        {node && (applied.length > 0 || node.note?.trim()) && (
+          <Section title={t('Note')}>
+            {applied.length > 0 && (
+              <div className="help-pills">
+                {applied.map((l) => (
+                  <LabelChip key={l.id} label={l} />
+                ))}
+              </div>
+            )}
+            {node.note?.trim() && <NoteView note={node.note} />}
+          </Section>
+        )}
 
         {help && (
           <Section title={t('Utilizzo')}>

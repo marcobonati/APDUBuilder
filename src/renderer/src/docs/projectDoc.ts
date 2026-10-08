@@ -7,7 +7,8 @@ import type { TlvNode } from '../emv/types'
 import { validate } from '../emv/validate'
 import type { Issue } from '../emv/validate'
 import { getLang, t } from '../i18n'
-import type { Project, ResponseDoc } from '../state/store'
+import type { LabelDef, Project, ResponseDoc } from '../state/store'
+import { demoteHeadings, renderMarkdown } from './markdown'
 
 // ---------------- Model ----------------
 
@@ -17,13 +18,17 @@ export interface DocOptions {
   includeDescriptions: boolean
   includeTlvDump: boolean
   includeIssues: boolean
+  includeLabels: boolean
+  includeNotes: boolean
 }
 
 export const DEFAULT_DOC_OPTIONS: DocOptions = {
   activeOnly: false,
   includeDescriptions: true,
   includeTlvDump: true,
-  includeIssues: true
+  includeIssues: true,
+  includeLabels: true,
+  includeNotes: true
 }
 
 interface DocField {
@@ -42,6 +47,9 @@ interface DocField {
   required: boolean
   template: boolean
   forcedLength: boolean
+  labels: LabelDef[]
+  /** Markdown note, '' when absent. */
+  note: string
 }
 
 interface DocResponse {
@@ -55,6 +63,8 @@ interface DocResponse {
   /** Data followed by the status word. */
   hex: string
   fields: DocField[]
+  /** Fields with a note, in tree order. */
+  notes: DocField[]
   dump: string
   issues: Issue[]
 }
@@ -63,10 +73,18 @@ interface DocModel {
   title: string
   generatedAt: string
   responses: DocResponse[]
+  /** Labels used in the exported responses, with the tags they are applied to. */
+  labels: { label: LabelDef; tags: { tag: string; name: string }[] }[]
   options: DocOptions
 }
 
-function collectFields(nodes: TlvNode[], depth: number, format1: boolean, out: DocField[]): void {
+function collectFields(
+  nodes: TlvNode[],
+  depth: number,
+  format1: boolean,
+  labels: LabelDef[],
+  out: DocField[]
+): void {
   for (const n of nodes) {
     if (!format1 && isOmitted(n)) continue
     const def = tagDef(n.tag)
@@ -84,9 +102,11 @@ function collectFields(nodes: TlvNode[], depth: number, format1: boolean, out: D
       hint: n.hint ? t(n.hint) : '',
       required: !!n.required,
       template,
-      forcedLength: !!n.lengthOverride
+      forcedLength: !!n.lengthOverride,
+      labels: n.labels?.length ? labels.filter((l) => n.labels!.includes(l.id)) : [],
+      note: n.note?.trim() ?? ''
     })
-    if (template) collectFields(n.children, depth + 1, !!n.concat, out)
+    if (template) collectFields(n.children, depth + 1, !!n.concat, labels, out)
   }
 }
 
@@ -110,11 +130,11 @@ function tlvDump(nodes: TlvNode[], depth = 0, format1 = false): string[] {
   return out
 }
 
-function buildResponse(r: ResponseDoc): DocResponse {
+function buildResponse(r: ResponseDoc, labels: LabelDef[]): DocResponse {
   const tpl = TEMPLATES.find((x) => x.id === r.templateId)
   const enc = encodeNodes(r.nodes)
   const fields: DocField[] = []
-  collectFields(r.nodes, 0, false, fields)
+  collectFields(r.nodes, 0, false, labels, fields)
   const swValid = /^[0-9A-F]{4}$/.test(r.sw)
   return {
     name: r.name,
@@ -133,6 +153,7 @@ function buildResponse(r: ResponseDoc): DocResponse {
     dataLength: enc.hex.length / 2,
     hex: enc.hex + (swValid ? r.sw : ''),
     fields,
+    notes: fields.filter((f) => f.note),
     dump: tlvDump(r.nodes).join('\n'),
     issues: validate(r.nodes, r.sw, enc.hex.length / 2).filter((i) => i.level !== 'info')
   }
@@ -142,10 +163,23 @@ export function buildDocModel(project: Project, options: DocOptions): DocModel {
   const responses = options.activeOnly
     ? project.responses.filter((r) => r.id === project.activeId)
     : project.responses
+  const docs = responses.map((r) => buildResponse(r, project.labels))
+  const labels = project.labels
+    .map((label) => {
+      const tags = new Map<string, string>()
+      for (const r of docs) {
+        for (const f of r.fields) {
+          if (f.labels.includes(label)) tags.set(f.tag || 'RAW', f.name)
+        }
+      }
+      return { label, tags: [...tags].map(([tag, name]) => ({ tag, name })) }
+    })
+    .filter((l) => l.tags.length)
   return {
     title: project.name,
     generatedAt: new Date().toLocaleString(getLang() === 'it' ? 'it-IT' : 'en-GB'),
-    responses: responses.map(buildResponse),
+    responses: docs,
+    labels,
     options
   }
 }
@@ -170,6 +204,10 @@ function anchor(i: number): string {
   return `response-${i + 1}`
 }
 
+function noteAnchor(i: number, k: number): string {
+  return `note-${i + 1}-${k + 1}`
+}
+
 // ---------------- Markdown ----------------
 
 /** Escapes text placed in a Markdown table cell. */
@@ -188,6 +226,18 @@ export function toMarkdown(m: DocModel): string {
   if (m.responses.length > 1) {
     L.push(`## ${t('Indice')}`, '')
     m.responses.forEach((r, i) => L.push(`${i + 1}. [${r.name}](#${anchor(i)})`))
+    L.push('')
+  }
+  if (o.includeLabels && m.labels.length) {
+    L.push(`## ${t('Label')}`, '')
+    L.push(`| ${t('Label')} | ${t('Tag')} |`, '|---|---|')
+    for (const { label, tags } of m.labels) {
+      L.push(
+        `| \`${mdCell(label.name)}\` | ${tags
+          .map((x) => `\`${x.tag}\` ${mdCell(x.name)}`)
+          .join('<br>')} |`
+      )
+    }
     L.push('')
   }
 
@@ -219,7 +269,13 @@ export function toMarkdown(m: DocModel): string {
       L.push('|---|---|---|---|---|')
       for (const f of r.fields) {
         const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(f.depth) + (f.depth ? '↳ ' : '')
-        const name = `${indent}${mdCell(f.name)}${f.required ? ' *' : ''}`
+        const chips =
+          o.includeLabels && f.labels.length
+            ? ' ' + f.labels.map((l) => `\`${mdCell(l.name)}\``).join(' ')
+            : ''
+        const k = r.notes.indexOf(f)
+        const noteLink = o.includeNotes && k >= 0 ? ` [📝](#${noteAnchor(i, k)})` : ''
+        const name = `${indent}${mdCell(f.name)}${f.required ? ' *' : ''}${chips}${noteLink}`
         const len = f.lengthHex
           ? `${f.lengthHex}${f.forcedLength ? ' ⚠' : ''} (${f.length})`
           : `${f.length}`
@@ -234,6 +290,18 @@ export function toMarkdown(m: DocModel): string {
         L.push(`| ${f.tag ? `\`${f.tag}\`` : 'RAW'} | ${name} | ${len} | ${value} | ${meaning} |`)
       }
       L.push('', `\\* ${t('campo obbligatorio nel template')}`, '')
+    }
+
+    if (o.includeNotes && r.notes.length) {
+      L.push(`### ${t('Note')}`, '')
+      r.notes.forEach((f, k) => {
+        L.push(`<a id="${noteAnchor(i, k)}"></a>`, '')
+        L.push(`#### ${f.tag ? `\`${f.tag}\` ` : ''}${f.name}`, '')
+        if (o.includeLabels && f.labels.length) {
+          L.push(f.labels.map((l) => `\`${l.name}\``).join(' '), '')
+        }
+        L.push(demoteHeadings(f.note, 4), '')
+      })
     }
 
     if (o.includeTlvDump && r.dump) {
@@ -300,7 +368,32 @@ const CSS = `
   ul.issues li.error { color: #d43c3c; }
   ul.issues li.warning { color: #8a6100; }
   .note { color: #8a91a0; font-size: 9pt; }
+  .lbl { display: inline-block; font-size: 8pt; font-weight: 600; line-height: 1.5; padding: 0 6px;
+    margin: 1px 0 1px 4px; border-radius: 8px; border: 1px solid var(--lc);
+    color: var(--lc); background: color-mix(in srgb, var(--lc) 12%, #fff); white-space: nowrap; }
+  .lbl:first-child { margin-left: 0; }
+  .note-link { text-decoration: none; margin-left: 4px; }
+  table.labels td:first-child { width: 160px; }
+  .tag-note { margin: 10px 0 14px; padding: 6px 12px 4px; border-left: 3px solid #2f66e6;
+    background: #f8f9fc; break-inside: avoid-page; }
+  .tag-note h4 { margin: 0 0 4px; font-size: 10.5pt; }
+  .md > :first-child { margin-top: 0; }
+  .md p, .md ul, .md ol, .md table, .md pre, .md blockquote { margin: 4px 0 6px; }
+  .md ul, .md ol { padding-left: 20px; }
+  .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { font-size: 10.5pt; margin: 8px 0 4px;
+    padding: 0; border: none; color: #1b1f27; }
+  .md h1, .md h2 { font-size: 11.5pt; }
+  .md code { background: #eef0f4; border-radius: 3px; padding: 0 3px; font-size: 9pt; }
+  .md pre code { background: none; padding: 0; }
+  .md a { color: #2455c9; }
+  .md hr { border: none; border-top: 1px solid #dde1e8; }
 `
+
+function htmlLabels(labels: LabelDef[]): string {
+  return labels
+    .map((l) => `<span class="lbl" style="--lc:${esc(l.color)}">${esc(l.name)}</span>`)
+    .join('')
+}
 
 export function toHtml(m: DocModel): string {
   const o = m.options
@@ -322,6 +415,17 @@ export function toHtml(m: DocModel): string {
     H.push(`<h3>${esc(t('Indice'))}</h3><ol class="toc">`)
     m.responses.forEach((r, i) => H.push(`<li><a href="#${anchor(i)}">${esc(r.name)}</a></li>`))
     H.push('</ol>')
+  }
+  if (o.includeLabels && m.labels.length) {
+    H.push(`<h3>${esc(t('Label'))}</h3><table class="labels"><tbody>`)
+    for (const { label, tags } of m.labels) {
+      H.push(
+        `<tr><td>${htmlLabels([label])}</td><td>${tags
+          .map((x) => `<span class="mono tag">${esc(x.tag)}</span> ${esc(x.name)}`)
+          .join('<br>')}</td></tr>`
+      )
+    }
+    H.push('</tbody></table>')
   }
 
   m.responses.forEach((r, i) => {
@@ -360,6 +464,12 @@ export function toHtml(m: DocModel): string {
       H.push('</tr></thead><tbody>')
       for (const f of r.fields) {
         const pad = f.depth * 14
+        const k = r.notes.indexOf(f)
+        const extra =
+          (o.includeLabels && f.labels.length ? ` ${htmlLabels(f.labels)}` : '') +
+          (o.includeNotes && k >= 0
+            ? ` <a class="note-link" href="#${noteAnchor(i, k)}" title="${esc(t('Nota'))}">📝</a>`
+            : '')
         const len = f.lengthHex
           ? `<span class="mono${f.forcedLength ? ' forced' : ''}">${f.lengthHex}</span> (${f.length})`
           : `${f.length}`
@@ -374,7 +484,7 @@ export function toHtml(m: DocModel): string {
           `<tr class="${f.template ? 'tpl' : ''}"><td class="mono tag">${f.tag || 'RAW'}</td>` +
             `<td style="padding-left:${6 + pad}px">${f.depth ? '↳ ' : ''}${esc(f.name)}${
               f.required ? ' <span class="req">*</span>' : ''
-            }</td>` +
+            }${extra}</td>` +
             `<td>${len}</td>` +
             `<td class="mono">${f.template ? '' : f.value ? esc(shortValue(f.value)) : '—'}</td>` +
             `<td>${meaning}</td></tr>`
@@ -383,6 +493,18 @@ export function toHtml(m: DocModel): string {
       H.push(
         `</tbody></table><div class="note">* ${esc(t('campo obbligatorio nel template'))}</div>`
       )
+    }
+
+    if (o.includeNotes && r.notes.length) {
+      H.push(`<h3>${esc(t('Note'))}</h3>`)
+      r.notes.forEach((f, k) => {
+        H.push(
+          `<div class="tag-note" id="${noteAnchor(i, k)}"><h4>${
+            f.tag ? `<span class="mono tag">${esc(f.tag)}</span> ` : ''
+          }${esc(f.name)}${o.includeLabels ? ` ${htmlLabels(f.labels)}` : ''}</h4>` +
+            `<div class="md">${renderMarkdown(f.note)}</div></div>`
+        )
+      })
     }
 
     if (o.includeTlvDump && r.dump) {

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { Dispatch } from 'react'
-import type { Action } from './store'
+import type { Action, LabelDef } from './store'
 import type { Issue } from '../emv/validate'
 import type { Lang } from '../i18n'
 
@@ -21,6 +21,8 @@ export interface EditorCtx {
   reveal: (id: string) => void
   issuesByNode: Map<string, Issue[]>
   lang: Lang
+  /** Labels defined in the project. */
+  labels: LabelDef[]
   /** Shows a tag in the help panel (when it follows the pointer). */
   showHelp: (target: HelpTarget) => void
 }

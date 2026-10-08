@@ -614,8 +614,8 @@ export const EN: Record<string, string> = {
   'Markdown copiato negli appunti': 'Markdown copied to the clipboard',
   'Impossibile copiare negli appunti': 'Unable to copy to the clipboard',
   'Esporta documentazione': 'Export documentation',
-  'Genera un documento con tutte le APDU response del progetto: comando di riferimento, byte RAW, tabella dei campi con valori decodificati e descrizioni.':
-    'Generates a document with all the APDU responses of the project: reference command, RAW bytes, field table with decoded values and descriptions.',
+  'Genera un documento con tutte le APDU response del progetto: comando di riferimento, byte RAW, tabella dei campi con valori decodificati e descrizioni, label e note.':
+    'Generates a document with all the APDU responses of the project: reference command, RAW bytes, field table with decoded values and descriptions, labels and notes.',
   Contenuto: 'Content',
   'Tutte le response ({n})': 'All responses ({n})',
   'Solo la response attiva': 'Active response only',
@@ -1176,8 +1176,37 @@ export const EN: Record<string, string> = {
     'Sent to the card with EXTERNAL AUTHENTICATE or in the second GENERATE AC (CDOL2) for issuer authentication.',
   'TC Hash Value: hash SHA-1 dei dati indicati dal TDOL.':
     'TC Hash Value: SHA-1 hash of the data listed in the TDOL.',
-  'Inviato alla carta se richiesto da CDOL1/CDOL2.': 'Sent to the card if requested by CDOL1/CDOL2.'
+  'Inviato alla carta se richiesto da CDOL1/CDOL2.':
+    'Sent to the card if requested by CDOL1/CDOL2.',
   // ---- end contextual help ----
+  // Labels and notes
+  Label: 'Labels',
+  'Rimuovi label': 'Remove label',
+  'Cerca o crea una label…': 'Search or create a label…',
+  'Nessuna label nel progetto: scrivi un nome per crearne una.':
+    'No labels in the project: type a name to create one.',
+  'Crea "{name}"': 'Create "{name}"',
+  'Cambia colore': 'Change color',
+  'Tag con questa label': 'Tags with this label',
+  'Eliminare la label "{name}"? Verrà rimossa da {n} tag.':
+    'Delete the label "{name}"? It will be removed from {n} tags.',
+  'Le label classificano i tag (es. Dynamic, Static) e compaiono nella documentazione esportata.':
+    'Labels classify tags (e.g. Dynamic, Static) and appear in the exported documentation.',
+  'Nuova label…': 'New label…',
+  'Esiste già una label con questo nome': 'A label with this name already exists',
+  Aggiungi: 'Add',
+  Scrivi: 'Write',
+  'Markdown supportato': 'Markdown supported',
+  Fatto: 'Done',
+  'Nessuna nota.': 'No note.',
+  'Note sul tag in Markdown: **grassetto**, _corsivo_, `codice`, elenchi, tabelle, link…':
+    'Tag notes in Markdown: **bold**, _italic_, `code`, lists, tables, links…',
+  'Modifica nota': 'Edit note',
+  'Aggiungi nota': 'Add note',
+  'Doppio clic per modificare la nota': 'Double-click to edit the note',
+  Note: 'Notes',
+  Nota: 'Note',
+  'Note sui tag': 'Tag notes'
 }
 
 /** Strings that are the same in both languages (product names, codes, commands). */

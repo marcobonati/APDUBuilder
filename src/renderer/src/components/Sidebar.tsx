@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
 import FileMenu from './FileMenu'
+import { LabelManager } from './Labels'
 import TemplatePicker from './TemplatePicker'
 import type { MenuCommandEvent, RecentFile } from '../../../preload/index.d'
 import { LANGS, t } from '../i18n'
@@ -9,6 +10,20 @@ import type { Lang } from '../i18n'
 import { useEditor } from '../state/context'
 import { baseName } from '../state/projectFile'
 import type { Project, ResponseDoc } from '../state/store'
+import type { TlvNode } from '../emv/types'
+
+/** Number of tags using each label, across all responses. */
+function labelUsage(project: Project): Map<string, number> {
+  const m = new Map<string, number>()
+  const walk = (nodes: TlvNode[]): void => {
+    for (const n of nodes) {
+      for (const l of n.labels ?? []) m.set(l, (m.get(l) ?? 0) + 1)
+      walk(n.children)
+    }
+  }
+  for (const r of project.responses) walk(r.nodes)
+  return m
+}
 
 interface Props {
   project: Project
@@ -115,6 +130,8 @@ export default function Sidebar(props: Props): React.JSX.Element {
   const { dispatch, lang } = useEditor()
   const [showResponses, setShowResponses] = useState(true)
   const [showTemplates, setShowTemplates] = useState(true)
+  const [showLabels, setShowLabels] = useState(true)
+  const usage = useMemo(() => labelUsage(project), [project])
 
   return (
     <nav className="sidebar">
@@ -166,6 +183,19 @@ export default function Sidebar(props: Props): React.JSX.Element {
                   count={project.responses.length}
                 />
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowLabels(!showLabels)}>
+            <span className="tpl-caret">{showLabels ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Label')}</span>
+            <span className="tpl-count">{project.labels.length}</span>
+          </button>
+          {showLabels && (
+            <div className="side-section-body">
+              <LabelManager usage={usage} />
             </div>
           )}
         </section>

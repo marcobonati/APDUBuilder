@@ -309,9 +309,20 @@ function App(): React.JSX.Element {
       reveal,
       issuesByNode,
       lang,
+      labels: state.project.labels,
       showHelp
     }),
-    [hovered, setHovered, selected, scrollTarget, reveal, issuesByNode, lang, showHelp]
+    [
+      hovered,
+      setHovered,
+      selected,
+      scrollTarget,
+      reveal,
+      issuesByNode,
+      lang,
+      state.project.labels,
+      showHelp
+    ]
   )
 
   const template = TEMPLATES.find((tpl) => tpl.id === active.templateId)
