@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { TEMPLATES } from '../emv/templates'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
+import TemplatePicker from './TemplatePicker'
 import { LANGS, t } from '../i18n'
 import type { Lang } from '../i18n'
 import { useEditor } from '../state/context'
@@ -114,8 +114,8 @@ function ResponseItem({
 export default function Sidebar(props: Props): React.JSX.Element {
   const { project, filePath, dirty } = props
   const { dispatch, lang } = useEditor()
+  const [showResponses, setShowResponses] = useState(true)
   const [showTemplates, setShowTemplates] = useState(true)
-  const groups = [...new Set(TEMPLATES.map((tpl) => tpl.group))]
 
   return (
     <nav className="sidebar">
@@ -174,52 +174,43 @@ export default function Sidebar(props: Props): React.JSX.Element {
       </div>
 
       <div className="sidebar-scroll">
-        <div className="tpl-group">
-          <div className="tpl-group-title">
-            {t('Response del progetto ({n})', { n: project.responses.length })}
-          </div>
-          {project.responses.map((r, i) => (
-            <ResponseItem
-              key={r.id}
-              r={r}
-              active={r.id === project.activeId}
-              index={i}
-              count={project.responses.length}
-            />
-          ))}
-        </div>
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowResponses(!showResponses)}>
+            <span className="tpl-caret">{showResponses ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Response del progetto')}</span>
+            <span className="tpl-count">{project.responses.length}</span>
+          </button>
+          {showResponses && (
+            <div className="side-section-body">
+              {project.responses.map((r, i) => (
+                <ResponseItem
+                  key={r.id}
+                  r={r}
+                  active={r.id === project.activeId}
+                  index={i}
+                  count={project.responses.length}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div className="tpl-section">
-          <button className="tpl-section-head" onClick={() => setShowTemplates(!showTemplates)}>
-            {showTemplates ? '▾' : '▸'} {t('Nuova response da template')}
+        <section className="side-section">
+          <button className="side-section-head" onClick={() => setShowTemplates(!showTemplates)}>
+            <span className="tpl-caret">{showTemplates ? '▾' : '▸'}</span>
+            <span className="side-section-title">{t('Template di risposta')}</span>
           </button>
           {showTemplates && (
-            <>
+            <div className="side-section-body">
               <div className="muted small tpl-help">
                 {t(
                   'Aggiunge una response al progetto (sostituisce quella attiva se non è ancora stata modificata).'
                 )}
               </div>
-              {groups.map((g) => (
-                <div key={g} className="tpl-group">
-                  <div className="tpl-group-title">{t(g)}</div>
-                  {TEMPLATES.filter((tpl) => tpl.group === g).map((tpl) => (
-                    <button
-                      key={tpl.id}
-                      className="tpl"
-                      onClick={() => props.onSelectTemplate(tpl)}
-                    >
-                      <span className="tpl-name">{t(tpl.name)}</span>
-                      {tpl.command.apdu && (
-                        <span className="tpl-cmd mono">{tpl.command.apdu.substr(0, 8)}…</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </>
+              <TemplatePicker onSelect={props.onSelectTemplate} />
+            </div>
           )}
-        </div>
+        </section>
       </div>
 
       <div className="sidebar-foot">

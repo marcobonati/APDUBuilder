@@ -18,9 +18,16 @@ interface Spec {
   children?: Spec[]
 }
 
+/** Interface on which the response is used. */
+export type Iface = 'contact' | 'contactless' | 'both'
+
 export interface ResponseTemplate {
   id: string
+  /** Key of TEMPLATE_GROUPS. */
   group: string
+  iface?: Iface
+  /** Payment scheme when the template is scheme specific. */
+  scheme?: string
   name: string
   description: string
   command: { name: string; apdu: string; note?: string }
@@ -46,6 +53,42 @@ export function buildNodes(specs: Spec[]): TlvNode[] {
   })
 }
 
+export interface TemplateGroup {
+  id: string
+  /** Step in the transaction flow, absent for utility groups. */
+  step?: number
+  desc: string
+}
+
+/** Template groups in transaction flow order. */
+export const TEMPLATE_GROUPS: TemplateGroup[] = [
+  { id: 'Selezione', step: 1, desc: "Scelta dell'applicazione: PPSE, PSE e AID" },
+  { id: 'Get Processing Options', step: 2, desc: 'Avvio della transazione: AIP e AFL' },
+  { id: 'Read Record', step: 3, desc: "Dati della carta indicati dall'AFL" },
+  { id: 'Autenticazione', step: 4, desc: 'Autenticazione offline (DDA) e numeri casuali' },
+  { id: 'Generate AC', step: 5, desc: 'Crittogramma: decisione della carta' },
+  { id: 'Get Data', step: 6, desc: 'Contatori e dati letti con GET DATA' },
+  { id: 'Altro', desc: 'Risposte libere o di solo errore' }
+]
+
+const INS_NAMES: Record<string, string> = {
+  A4: 'SELECT',
+  B2: 'READ RECORD',
+  A8: 'GET PROCESSING OPTIONS',
+  AE: 'GENERATE AC',
+  '88': 'INTERNAL AUTHENTICATE',
+  '84': 'GET CHALLENGE',
+  CA: 'GET DATA',
+  '82': 'EXTERNAL AUTHENTICATE',
+  '20': 'VERIFY'
+}
+
+/** INS byte and standard command name of the reference command APDU. */
+export function commandOf(tpl: ResponseTemplate): { ins: string; name: string } | null {
+  const ins = tpl.command.apdu.substr(2, 2).toUpperCase()
+  return ins ? { ins, name: INS_NAMES[ins] ?? '' } : null
+}
+
 const PPSE = '325041592E5359532E4444463031'
 const PSE = '315041592E5359532E4444463031'
 
@@ -54,6 +97,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'select-ppse',
     group: 'Selezione',
+    iface: 'contactless',
     name: 'SELECT PPSE',
     description:
       'Risposta alla SELECT del Proximity Payment System Environment (contactless). Contiene una Directory Entry (61) per ciascuna applicazione: duplicala per aggiungere altre AID.',
@@ -113,6 +157,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'select-pse',
     group: 'Selezione',
+    iface: 'contact',
     name: 'SELECT PSE (contact)',
     description:
       "Risposta alla SELECT del Payment System Environment (contact). Indica l'SFI del file di directory da leggere con READ RECORD.",
@@ -146,6 +191,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'read-record-pse',
     group: 'Selezione',
+    iface: 'contact',
     name: 'READ RECORD PSE directory',
     description: 'Record del file di directory della PSE (contact): una entry 61 per applicazione.',
     command: { name: 'READ RECORD SFI 1, record 1', apdu: '00B2010C00' },
@@ -171,6 +217,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'select-aid',
     group: 'Selezione',
+    iface: 'both',
     name: 'SELECT AID',
     description:
       "Risposta alla SELECT dell'applicazione. Il PDOL (9F38) indica i dati che il terminale deve inviare nella GPO.",
@@ -215,6 +262,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gpo-f2',
     group: 'Get Processing Options',
+    iface: 'both',
     name: 'GPO – Formato 2 (77)',
     description: 'Risposta GPO in formato TLV con AIP e AFL. È il formato più usato.',
     command: {
@@ -236,6 +284,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gpo-f1',
     group: 'Get Processing Options',
+    iface: 'contact',
     name: 'GPO – Formato 1 (80)',
     description: "Risposta GPO in formato 1: AIP (2 byte) seguito dall'AFL, senza tag interni.",
     command: { name: 'GET PROCESSING OPTIONS', apdu: '80A8000002830000' },
@@ -254,6 +303,8 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gpo-qvsdc',
     group: 'Get Processing Options',
+    iface: 'contactless',
+    scheme: 'Visa',
     name: 'GPO – Visa qVSDC',
     description:
       'Risposta GPO contactless Visa (qVSDC): oltre ad AIP/AFL contiene Track 2, crittogramma, IAD e CTQ.',
@@ -285,6 +336,8 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gpo-mc',
     group: 'Get Processing Options',
+    iface: 'contactless',
+    scheme: 'Mastercard',
     name: 'GPO – Mastercard contactless',
     description: 'Risposta GPO Mastercard (M/Chip contactless): AIP con bit EMV mode e AFL.',
     command: { name: 'GET PROCESSING OPTIONS', apdu: '80A8000002830000' },
@@ -304,6 +357,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'rr-track',
     group: 'Read Record',
+    iface: 'both',
     name: 'READ RECORD – Track 2 / titolare',
     description: 'Record con i dati di traccia e il nome del titolare.',
     command: { name: 'READ RECORD SFI 1, record 1', apdu: '00B2010C00' },
@@ -318,6 +372,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'rr-app',
     group: 'Read Record',
+    iface: 'both',
     name: 'READ RECORD – Dati applicazione',
     description:
       'Record con PAN, date, codici paese/valuta, DOL per il GENERATE AC, CVM List e Issuer Action Codes.',
@@ -348,6 +403,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'rr-oda',
     group: 'Read Record',
+    iface: 'both',
     name: 'READ RECORD – Certificati ODA',
     description:
       "Record con gli elementi per l'Offline Data Authentication (chiavi e certificati).",
@@ -375,6 +431,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gac-f2',
     group: 'Generate AC',
+    iface: 'both',
     name: 'GENERATE AC – Formato 2 (77)',
     description: 'Risposta GENERATE AC in formato TLV. Con CDA include la firma dinamica (9F4B).',
     command: {
@@ -399,6 +456,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gac-f1',
     group: 'Generate AC',
+    iface: 'contact',
     name: 'GENERATE AC – Formato 1 (80)',
     description: 'Risposta GENERATE AC in formato 1: CID || ATC || AC || IAD concatenati.',
     command: {
@@ -425,6 +483,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'ia-f2',
     group: 'Autenticazione',
+    iface: 'contact',
     name: 'INTERNAL AUTHENTICATE – Formato 2',
     description: 'Firma dinamica DDA in formato TLV.',
     command: {
@@ -437,6 +496,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'ia-f1',
     group: 'Autenticazione',
+    iface: 'contact',
     name: 'INTERNAL AUTHENTICATE – Formato 1',
     description: 'Firma dinamica DDA in formato 1 (solo valore dentro il tag 80).',
     command: { name: 'INTERNAL AUTHENTICATE', apdu: '00880000041234567800' },
@@ -452,6 +512,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'get-challenge',
     group: 'Autenticazione',
+    iface: 'contact',
     name: 'GET CHALLENGE',
     description: 'Numero casuale di 8 byte, senza struttura TLV.',
     command: { name: 'GET CHALLENGE', apdu: '0084000000' },
@@ -470,6 +531,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gd-atc',
     group: 'Get Data',
+    iface: 'both',
     name: 'GET DATA – ATC',
     description: 'Application Transaction Counter.',
     command: { name: 'GET DATA 9F36', apdu: '80CA9F3600' },
@@ -478,6 +540,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gd-ptc',
     group: 'Get Data',
+    iface: 'contact',
     name: 'GET DATA – PIN Try Counter',
     description: 'Numero di tentativi PIN residui.',
     command: { name: 'GET DATA 9F17', apdu: '80CA9F1700' },
@@ -486,6 +549,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gd-lonatc',
     group: 'Get Data',
+    iface: 'both',
     name: 'GET DATA – Last Online ATC',
     description: "ATC dell'ultima transazione online.",
     command: { name: 'GET DATA 9F13', apdu: '80CA9F1300' },
@@ -494,6 +558,7 @@ export const TEMPLATES: ResponseTemplate[] = [
   {
     id: 'gd-logformat',
     group: 'Get Data',
+    iface: 'both',
     name: 'GET DATA – Log Format',
     description: 'Formato dei record del log transazioni.',
     command: { name: 'GET DATA 9F4F', apdu: '80CA9F4F00' },

@@ -447,8 +447,6 @@ export const EN: Record<string, string> = {
   Salva: 'Save',
   'Salva come': 'Save as',
   'Salva come…': 'Save as…',
-  'Response del progetto ({n})': 'Project responses ({n})',
-  'Nuova response da template': 'New response from template',
   'Aggiunge una response al progetto (sostituisce quella attiva se non è ancora stata modificata).':
     'Adds a response to the project (replaces the active one if it has not been modified yet).',
   Testo: 'Text',
@@ -724,6 +722,18 @@ export const EN: Record<string, string> = {
   'multiplo di 10: PAN valido ✓': 'multiple of 10: valid PAN ✓',
   'non multiplo di 10: PAN non valido. Cifra di controllo attesa {exp} (presente {cur}).':
     'not a multiple of 10: invalid PAN. Expected check digit {exp} (found {cur}).',
+  "Scelta dell'applicazione: PPSE, PSE e AID": 'Application choice: PPSE, PSE and AID',
+  'Avvio della transazione: AIP e AFL': 'Transaction start: AIP and AFL',
+  "Dati della carta indicati dall'AFL": 'Card data listed in the AFL',
+  'Autenticazione offline (DDA) e numeri casuali':
+    'Offline authentication (DDA) and random numbers',
+  'Crittogramma: decisione della carta': "Cryptogram: the card's decision",
+  'Contatori e dati letti con GET DATA': 'Counters and data read with GET DATA',
+  'Risposte libere o di solo errore': 'Free-form or error-only responses',
+  'Response del progetto': 'Project responses',
+  'Template di risposta': 'Response templates',
+  'Cerca template (nome, comando, circuito…)': 'Search templates (name, command, scheme…)',
+  'Nessun template corrisponde alla ricerca.': 'No template matches the search.',
   // ---- Contextual help (generated) ----
   'Selezione applicazione': 'Application selection',
   "SELECT di PPSE/PSE e AID: il terminale costruisce la candidate list e sceglie l'applicazione.":
