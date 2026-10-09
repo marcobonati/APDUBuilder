@@ -1,5 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
 export interface Api {
   /** Shows the open dialog and returns the selected project file, or null if cancelled. */
   openProject: () => Promise<{ path: string; content: string } | null>
@@ -56,7 +54,6 @@ export interface MenuCommandEvent {
 
 declare global {
   interface Window {
-    electron: ElectronAPI
     /** Missing when the renderer runs outside Electron (plain browser). */
     api?: Api
   }

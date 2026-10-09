@@ -16,13 +16,13 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
-  },
-  "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
-    "@electron-toolkit/utils": "^4.0.0"
+    "build:win": "npm run build && electron-builder --win --publish never",
+    "build:mac": "npm run build && electron-builder --mac --publish never",
+    "build:linux": "npm run build && electron-builder --linux --publish never",
+    "build:all": "npm run build && electron-builder --mac --win --linux --publish never",
+    "clean": "node -e \"for (const d of ['out', 'dist']) require('fs').rmSync(d, { recursive: true, force: true })\"",
+    "checksums": "node scripts/checksums.mjs",
+    "dist": "npm run lint && npm run clean && npm run build:all && npm run checksums"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

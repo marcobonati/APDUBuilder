@@ -87,11 +87,22 @@ export type Action =
 
 const HISTORY = 100
 
+/**
+ * Maps every node of the tree. Nodes (and lists) left unchanged by fn keep
+ * their identity, which lets memoized components skip untouched subtrees.
+ */
 export function mapTree(list: TlvNode[], fn: (n: TlvNode) => TlvNode): TlvNode[] {
-  return list.map((n) => {
-    const m = fn(n)
-    return m.children.length ? { ...m, children: mapTree(m.children, fn) } : m
+  let changed = false
+  const out = list.map((n) => {
+    let m = fn(n)
+    if (m.children.length) {
+      const children = mapTree(m.children, fn)
+      if (children !== m.children) m = { ...m, children }
+    }
+    if (m !== n) changed = true
+    return m
   })
+  return changed ? out : list
 }
 
 export function findNode(list: TlvNode[], id: string): TlvNode | null {
@@ -111,9 +122,15 @@ function editSiblings<T extends { id: string; children?: T[] }>(
 ): T[] {
   const i = list.findIndex((n) => n.id === id)
   if (i >= 0) return fn(list, i)
-  return list.map((n) =>
-    n.children?.length ? { ...n, children: editSiblings(n.children, id, fn) } : n
-  )
+  let changed = false
+  const out = list.map((n) => {
+    if (!n.children?.length) return n
+    const children = editSiblings(n.children, id, fn)
+    if (children === n.children) return n
+    changed = true
+    return { ...n, children }
+  })
+  return changed ? out : list
 }
 
 function swap<T>(l: T[], i: number, dir: -1 | 1): T[] {
@@ -236,11 +253,13 @@ export function reducer(s: State, a: Action): State {
       }))
     case 'clearValues':
       return editActive(s, (r) => ({
-        nodes: mapTree(r.nodes, (n) => (n.fixed ? n : { ...n, value: '' }))
+        nodes: mapTree(r.nodes, (n) => (n.fixed || !n.value ? n : { ...n, value: '' }))
       }))
     case 'setCollapsed':
       return viewActive(s, (nodes) =>
-        mapTree(nodes, (n) => (n.children.length ? { ...n, collapsed: a.collapsed } : n))
+        mapTree(nodes, (n) =>
+          n.children.length && !!n.collapsed !== a.collapsed ? { ...n, collapsed: a.collapsed } : n
+        )
       )
     case 'reveal':
       return viewActive(s, (nodes) =>

@@ -1,25 +1,23 @@
 import { createContext, useContext } from 'react'
 import type { Dispatch } from 'react'
 import type { Action, LabelDef } from './store'
-import type { Issue } from '../emv/validate'
 import type { Lang } from '../i18n'
+import type { HelpTarget, ViewState, ViewStore } from './viewStore'
+import { useView } from './viewStore'
 
-/** What the help panel documents: a node of the tree, or just a tag (DOL entries, menus). */
-export interface HelpTarget {
-  tag: string
-  nodeId?: string
-}
+export type { HelpTarget }
 
+/**
+ * Editor services shared by the tree. Everything here is stable or changes
+ * rarely (language, labels): pointer and selection state is read through
+ * useViewState so that hovering does not re-render every consumer.
+ */
 export interface EditorCtx {
   dispatch: Dispatch<Action>
-  hovered: string | null
+  view: ViewStore
   setHovered: (id: string | null) => void
-  selected: string | null
   setSelected: (id: string | null) => void
-  /** Last node requested to be scrolled into view (from the raw panel / issue list). */
-  scrollTarget: { id: string; n: number } | null
   reveal: (id: string) => void
-  issuesByNode: Map<string, Issue[]>
   lang: Lang
   /** Labels defined in the project. */
   labels: LabelDef[]
@@ -33,4 +31,8 @@ export function useEditor(): EditorCtx {
   const ctx = useContext(EditorContext)
   if (!ctx) throw new Error('EditorContext mancante')
   return ctx
+}
+
+export function useViewState<T>(select: (s: ViewState) => T): T {
+  return useView(useEditor().view, select)
 }

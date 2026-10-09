@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
 import FileMenu from './FileMenu'
@@ -36,7 +36,7 @@ interface Props {
   recent: RecentFile[]
 }
 
-function ResponseItem({
+const ResponseItem = memo(function ResponseItem({
   r,
   active,
   index,
@@ -123,9 +123,9 @@ function ResponseItem({
       </span>
     </div>
   )
-}
+})
 
-export default function Sidebar(props: Props): React.JSX.Element {
+export default memo(function Sidebar(props: Props): React.JSX.Element {
   const { project, filePath, dirty } = props
   const { dispatch, lang } = useEditor()
   const [showResponses, setShowResponses] = useState(true)
@@ -219,4 +219,4 @@ export default function Sidebar(props: Props): React.JSX.Element {
       </div>
     </nav>
   )
-}
+})

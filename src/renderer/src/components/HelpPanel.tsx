@@ -16,15 +16,14 @@ import { TEMPLATES } from '../emv/templates'
 import { hasChildren, isConstructedTag, parseDol, tagError, valueHex } from '../emv/tlv'
 import type { TagDef, TlvNode } from '../emv/types'
 import { t } from '../i18n'
-import { useEditor } from '../state/context'
-import type { HelpTarget } from '../state/context'
+import { memo } from 'react'
+import { useEditor, useViewState } from '../state/context'
 import { LabelChip } from './Labels'
 import { nodeLabels } from '../state/labels'
 import { NoteView } from './NoteEditor'
 import { FORMAT_HELP, TAG_CLASSES } from '../emv/helpFormats'
 
 interface Props {
-  target: HelpTarget | null
   nodes: TlvNode[]
   locked: boolean
   onToggleLock: () => void
@@ -302,14 +301,14 @@ function ValueDetails({ def, value }: { def: TagDef; value: string }): React.JSX
   return null
 }
 
-export default function HelpPanel({
-  target,
+export default memo(function HelpPanel({
   nodes,
   locked,
   onToggleLock,
   onClose
 }: Props): React.JSX.Element {
   const { labels } = useEditor()
+  const target = useViewState((s) => s.helpTarget)
   const found = target?.nodeId ? findWithParent(nodes, target.nodeId) : null
   const node = found?.node ?? null
   const tag = node ? node.tag : (target?.tag ?? '')
@@ -578,4 +577,4 @@ export default function HelpPanel({
       </div>
     </aside>
   )
-}
+})
