@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState
+} from 'react'
 import AddTagMenu from './components/AddTagMenu'
 import ExportDocDialog from './components/ExportDocDialog'
 import HelpPanel from './components/HelpPanel'
@@ -14,7 +22,9 @@ import type { Issue } from './emv/validate'
 import { initialLang, setLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { EditorContext } from './state/context'
-import type { EditorCtx, HelpTarget } from './state/context'
+import type { EditorCtx } from './state/context'
+import { createViewStore } from './state/viewStore'
+import type { HelpTarget } from './state/viewStore'
 import { baseName, parseProject, serializeProject } from './state/projectFile'
 import { notifyDirty, openProjectFile, openProjectPath, saveProjectFile } from './state/projectIO'
 import {
@@ -76,10 +86,9 @@ function App(): React.JSX.Element {
     return l
   })
   const [state, dispatch] = useReducer(reducer, undefined, init)
-  const [hovered, setHoveredState] = useState<string | null>(null)
+  const [view] = useState(createViewStore)
   const [helpOpen, setHelpOpen] = useState(initialHelpOpen)
   const [helpLocked, setHelpLocked] = useState(false)
-  const [helpTarget, setHelpTarget] = useState<HelpTarget | null>(null)
   const helpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const helpLockedRef = useRef(helpLocked)
   useEffect(() => {
@@ -87,18 +96,23 @@ function App(): React.JSX.Element {
   }, [helpLocked])
 
   // Every hover source (tree, RAW bytes, issue list) also drives the help panel.
-  const showHelp = useCallback((target: HelpTarget) => {
-    if (helpLockedRef.current) return
-    if (helpTimer.current) clearTimeout(helpTimer.current)
-    helpTimer.current = setTimeout(() => setHelpTarget(target), HELP_DELAY)
-  }, [])
+  const showHelp = useCallback(
+    (target: HelpTarget) => {
+      if (helpLockedRef.current) return
+      if (helpTimer.current) clearTimeout(helpTimer.current)
+      helpTimer.current = setTimeout(() => view.set({ helpTarget: target }), HELP_DELAY)
+    },
+    [view]
+  )
   const setHovered = useCallback(
     (id: string | null) => {
-      setHoveredState(id)
+      if (view.get().hovered === id) return
+      view.set({ hovered: id })
       if (id) showHelp({ tag: '', nodeId: id })
     },
-    [showHelp]
+    [view, showHelp]
   )
+  const setSelected = useCallback((id: string | null) => view.set({ selected: id }), [view])
   const toggleHelp = useCallback(() => {
     setHelpOpen((open) => {
       try {
@@ -109,8 +123,6 @@ function App(): React.JSX.Element {
       return !open
     })
   }, [])
-  const [selected, setSelected] = useState<string | null>(null)
-  const [scrollTarget, setScrollTarget] = useState<{ id: string; n: number } | null>(null)
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
@@ -129,6 +141,8 @@ function App(): React.JSX.Element {
     for (const i of issues) if (i.nodeId) m.set(i.nodeId, [...(m.get(i.nodeId) ?? []), i])
     return m
   }, [issues])
+  // Published before paint, so cards never show issues of the previous edit.
+  useLayoutEffect(() => view.set({ issuesByNode }), [view, issuesByNode])
   const prog = useMemo(() => progress(active.nodes), [active.nodes])
 
   useEffect(() => {
@@ -292,37 +306,30 @@ function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [fire])
 
-  const reveal = useCallback((id: string) => {
-    dispatch({ type: 'reveal', id })
-    setSelected(id)
-    setScrollTarget((s) => ({ id, n: (s?.n ?? 0) + 1 }))
-  }, [])
+  const reveal = useCallback(
+    (id: string) => {
+      dispatch({ type: 'reveal', id })
+      const n = (view.get().scrollTarget?.n ?? 0) + 1
+      view.set({ selected: id, scrollTarget: { id, n } })
+    },
+    [view]
+  )
 
+  const selectTemplate = useCallback(
+    (tpl: ResponseTemplate) =>
+      dispatch({ type: 'load', doc: docFromTemplate(tpl), name: t(tpl.name) }),
+    []
+  )
+  const changeLang = useCallback((l: Lang) => {
+    setLang(l)
+    setLangState(l)
+  }, [])
+  const toggleLock = useCallback(() => setHelpLocked((l) => !l), [])
+
+  const labels = state.project.labels
   const ctx: EditorCtx = useMemo(
-    () => ({
-      dispatch,
-      hovered,
-      setHovered,
-      selected,
-      setSelected,
-      scrollTarget,
-      reveal,
-      issuesByNode,
-      lang,
-      labels: state.project.labels,
-      showHelp
-    }),
-    [
-      hovered,
-      setHovered,
-      selected,
-      scrollTarget,
-      reveal,
-      issuesByNode,
-      lang,
-      state.project.labels,
-      showHelp
-    ]
+    () => ({ dispatch, view, setHovered, setSelected, reveal, lang, labels, showHelp }),
+    [view, setHovered, setSelected, reveal, lang, labels, showHelp]
   )
 
   const template = TEMPLATES.find((tpl) => tpl.id === active.templateId)
@@ -335,15 +342,10 @@ function App(): React.JSX.Element {
           project={state.project}
           filePath={state.filePath}
           dirty={dirty}
-          onSelectTemplate={(tpl) =>
-            dispatch({ type: 'load', doc: docFromTemplate(tpl), name: t(tpl.name) })
-          }
+          onSelectTemplate={selectTemplate}
           onCommand={fire}
           recent={recent}
-          onLang={(l) => {
-            setLang(l)
-            setLangState(l)
-          }}
+          onLang={changeLang}
         />
 
         <main className="editor">
@@ -449,7 +451,7 @@ function App(): React.JSX.Element {
               <NodeCard
                 key={n.id}
                 node={n}
-                parent={null}
+                inFormat1={false}
                 index={i}
                 count={active.nodes.length}
                 depth={0}
@@ -466,10 +468,9 @@ function App(): React.JSX.Element {
 
         {helpOpen && (
           <HelpPanel
-            target={helpTarget}
             nodes={active.nodes}
             locked={helpLocked}
-            onToggleLock={() => setHelpLocked((l) => !l)}
+            onToggleLock={toggleLock}
             onClose={toggleHelp}
           />
         )}

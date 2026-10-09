@@ -37,12 +37,32 @@ $ npm run dev
 ### Build
 
 ```bash
-# For windows
-$ npm run build:win
+# Una sola piattaforma
+$ npm run build:mac     # DMG + ZIP, arm64 e x64
+$ npm run build:win     # installer NSIS (x64, arm64) + eseguibile portable (x64)
+$ npm run build:linux   # AppImage + deb, x64 e arm64
 
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
+# Tutte le piattaforme
+$ npm run build:all
 ```
+
+### Distribuzione
+
+```bash
+$ npm run dist
+```
+
+Esegue lint, pulizia di `out/` e `dist/`, typecheck, build di tutte le piattaforme e genera
+`dist/SHA256SUMS.txt` con l'elenco degli artefatti e le loro dimensioni. Gli installer sono in `dist/`:
+
+| Piattaforma | File                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| macOS       | `emv-apdu-builder-<versione>-mac-<arch>.dmg` / `.zip`                                                       |
+| Windows     | `emv-apdu-builder-<versione>-win-<arch>-setup.exe`, `…-win-x64-portable.exe`                                |
+| Linux       | `emv-apdu-builder-<versione>-linux-<arch>.AppImage` / `.deb` (x64 è `x86_64` per AppImage, `amd64` per deb) |
+
+Note:
+
+- Tutte le piattaforme si compilano da macOS. Da Windows o Linux non si possono creare i pacchetti macOS: in quel caso usa `build:win` / `build:linux`.
+- Le app non sono firmate. Su macOS al primo avvio serve tasto destro → Apri (o `xattr -dr com.apple.quarantine "EMV APDU Builder.app"`); su Windows SmartScreen chiede conferma. Per firmare, imposta `CSC_LINK` / `CSC_KEY_PASSWORD` (e per macOS la notarizzazione in `electron-builder.yml`).
+- `npm run clean` rimuove `out/` e `dist/`; `npm run checksums` rigenera solo i checksum.

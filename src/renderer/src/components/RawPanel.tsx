@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { describeValue } from '../emv/formats'
 import { normalizeHex, splitBytes } from '../emv/hex'
 import { STATUS_WORDS, describeSw, tagDef } from '../emv/tags'
@@ -6,7 +6,7 @@ import { encodeLength, hasChildren, isOmitted, valueHex } from '../emv/tlv'
 import type { Encoded, Segment } from '../emv/tlv'
 import type { TlvNode } from '../emv/types'
 import type { Issue } from '../emv/validate'
-import { useEditor } from '../state/context'
+import { useEditor, useViewState } from '../state/context'
 import { t } from '../i18n'
 
 interface Props {
@@ -117,8 +117,67 @@ function segLabel(seg: Segment, map: Map<string, TlvNode>): string {
   return `${n.tag} ${tagDef(n.tag).name} – ${what}`
 }
 
-export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.JSX.Element {
-  const { dispatch, hovered, setHovered, reveal, lang } = useEditor()
+interface HexByte {
+  b: string
+  seg: Segment
+  /** Node the byte belongs to, '' for the status word. */
+  owner: string
+  title: string
+  cls: string
+}
+
+/**
+ * Hex dump of the response. The only part of the panel that follows the
+ * pointer: the bytes are prepared once per content change, and hovering
+ * just toggles the highlight class. Events are delegated to the container.
+ */
+const HexView = memo(function HexView({ rows }: { rows: HexByte[][] }): React.JSX.Element {
+  const { setHovered, reveal } = useEditor()
+  const hovered = useViewState((s) => s.hovered)
+  const byteAt = (e: React.MouseEvent): HexByte | null => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-i]')
+    if (!el) return null
+    const i = Number(el.dataset.i)
+    return rows[i >> 4]?.[i & 15] ?? null
+  }
+
+  return (
+    <div
+      className="hexview"
+      onMouseLeave={() => setHovered(null)}
+      onMouseOver={(e) => {
+        const x = byteAt(e)
+        if (x) setHovered(x.owner || null)
+      }}
+      onClick={(e) => {
+        const x = byteAt(e)
+        if (x?.owner) reveal(x.owner)
+      }}
+    >
+      {rows.length === 0 && <div className="muted">{t('Nessun dato')}</div>}
+      {rows.map((row, ri) => (
+        <div className="hexrow" key={ri}>
+          <span className="offset">{(ri * 16).toString(16).toUpperCase().padStart(4, '0')}</span>
+          <span className="hexbytes">
+            {row.map((x, bi) => (
+              <span
+                key={bi}
+                data-i={ri * 16 + bi}
+                className={hovered !== null && x.seg.path.includes(hovered) ? `${x.cls} hl` : x.cls}
+                title={x.title}
+              >
+                {x.b}
+              </span>
+            ))}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+})
+
+export default memo(function RawPanel({ nodes, encoded, sw, issues }: Props): React.JSX.Element {
+  const { dispatch, setHovered, reveal, lang } = useEditor()
   const [includeSw, setIncludeSw] = useState(true)
   const [format, setFormat] = useState<CopyFormat>('spaced')
   const [copied, setCopied] = useState<string | null>(null)
@@ -127,16 +186,28 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
   const map = useMemo(() => indexNodes(nodes), [nodes])
   const swValid = /^[0-9A-F]{4}$/.test(sw)
   const fullHex = encoded.hex + (includeSw && swValid ? sw : '')
+  const formatted = useMemo(() => formatAs(fullHex, format), [fullHex, format])
   const dataLen = encoded.hex.length / 2
 
-  const bytes = useMemo(() => {
+  // lang: byte titles are translated.
+  const rows = useMemo(() => {
     const segs: Segment[] = [...encoded.segments]
     if (includeSw && swValid) segs.push({ path: ['__sw'], kind: 'sw', hex: sw, depth: 0 })
-    return segs.flatMap((seg) => splitBytes(seg.hex).map((b) => ({ b, seg })))
-  }, [encoded, sw, includeSw, swValid])
-
-  const rows: (typeof bytes)[] = []
-  for (let i = 0; i < bytes.length; i += 16) rows.push(bytes.slice(i, i + 16))
+    const bytes = segs.flatMap((seg) => {
+      const title = segLabel(seg, map)
+      const cls = [
+        'byte',
+        `k-${seg.kind}`,
+        seg.kind === 'len' && !seg.autoLength ? 'forced' : '',
+        `d-${seg.depth % 4}`
+      ].join(' ')
+      const owner = seg.kind === 'sw' ? '' : seg.path[seg.path.length - 1]
+      return splitBytes(seg.hex).map((b): HexByte => ({ b, seg, owner, title, cls }))
+    })
+    const out: HexByte[][] = []
+    for (let i = 0; i < bytes.length; i += 16) out.push(bytes.slice(i, i + 16))
+    return out
+  }, [encoded, sw, includeSw, swValid, map, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const doCopy = async (text: string, key: string): Promise<void> => {
     if (await copy(text)) {
@@ -177,39 +248,7 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
           </label>
         </div>
 
-        <div className="hexview" onMouseLeave={() => setHovered(null)}>
-          {rows.length === 0 && <div className="muted">{t('Nessun dato')}</div>}
-          {rows.map((row, ri) => (
-            <div className="hexrow" key={ri}>
-              <span className="offset">
-                {(ri * 16).toString(16).toUpperCase().padStart(4, '0')}
-              </span>
-              <span className="hexbytes">
-                {row.map(({ b, seg }, bi) => {
-                  const owner = seg.path[seg.path.length - 1]
-                  const hl = hovered !== null && seg.path.includes(hovered)
-                  return (
-                    <span
-                      key={bi}
-                      className={[
-                        'byte',
-                        `k-${seg.kind}`,
-                        seg.kind === 'len' && !seg.autoLength ? 'forced' : '',
-                        `d-${seg.depth % 4}`,
-                        hl ? 'hl' : ''
-                      ].join(' ')}
-                      title={segLabel(seg, map)}
-                      onMouseEnter={() => setHovered(seg.kind === 'sw' ? null : owner)}
-                      onClick={() => seg.kind !== 'sw' && reveal(owner)}
-                    >
-                      {b}
-                    </span>
-                  )
-                })}
-              </span>
-            </div>
-          ))}
-        </div>
+        <HexView rows={rows} />
 
         <div className="copy-bar">
           <select
@@ -223,15 +262,12 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
               </option>
             ))}
           </select>
-          <button
-            className="btn primary small"
-            onClick={() => doCopy(formatAs(fullHex, format), 'raw')}
-          >
+          <button className="btn primary small" onClick={() => doCopy(formatted, 'raw')}>
             {copied === 'raw' ? `✓ ${t('Copiato')}` : t('Copia')}
           </button>
         </div>
         <pre className={`raw-text ${format === 'hex' || format === 'spaced' ? '' : 'code'}`}>
-          {formatAs(fullHex, format)}
+          {formatted}
         </pre>
       </section>
 
@@ -307,4 +343,4 @@ export default function RawPanel({ nodes, encoded, sw, issues }: Props): React.J
       </section>
     </aside>
   )
-}
+})
