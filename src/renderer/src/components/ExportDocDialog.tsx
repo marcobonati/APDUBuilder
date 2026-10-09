@@ -159,7 +159,7 @@ export default function ExportDocDialog({ project, onClose, onDone }: Props): Re
 
         <div className="modal-actions">
           <button className="btn" onClick={onClose}>
-            {t('Annulla')}
+            {t('Chiudi')}
           </button>
           <button className="btn" onClick={copyMarkdown} disabled={busy}>
             {t('Copia Markdown')}

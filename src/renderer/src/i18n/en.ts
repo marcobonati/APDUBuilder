@@ -374,6 +374,7 @@ export const EN: Record<string, string> = {
   Espandi: 'Expand',
   Comprimi: 'Collapse',
   Annulla: 'Undo',
+  Chiudi: 'Close',
   Ripeti: 'Redo',
   'Response senza dati: verrà inviata solo la Status Word {sw}.':
     'Response without data: only Status Word {sw} will be sent.',
