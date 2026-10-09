@@ -6,6 +6,7 @@ Tool desktop (Electron + React + TypeScript) per comporre APDU response EMV in m
 - Compila i tag con editor specifici per formato: testo, numerico, date, bitfield (AIP, AUC, CTQ, IAC, CID), DOL, AFL, CVM List, Track 2.
 - Lunghezze e template annidati vengono calcolati automaticamente; il pannello a destra mostra i byte RAW colorati, la Status Word, la verifica e la struttura TLV.
 
+- **C-APDU per ogni response**: il comando che produce la response viene generato seguendo il flusso del progetto (PPSE/directory → SELECT AID, PDOL → GPO, AFL → READ RECORD in ordine, CDOL1/CDOL2 → GENERATE AC, DDOL → INTERNAL AUTHENTICATE, tag → GET DATA). I dati del terminale usati nei DOL sono modificabili e valgono per tutto il progetto; il comando si può anche sostituire a mano. È incluso nella documentazione esportata.
 - **Menu File** (nativo e nell'app): nuovo, apri, **apri recenti** (ultimi 10 file, anche ⌥⌘1…9), salva, salva come, importa da hex, esporta documentazione.
 - Organizza più response in un **progetto** (es. tutte le risposte di un profilo carta) e salvalo/aprilo come file `.emvproj` (JSON leggibile) con ⌘S / ⇧⌘S / ⌘O / ⌘N. La sessione corrente viene comunque conservata automaticamente tra un avvio e l'altro.
 

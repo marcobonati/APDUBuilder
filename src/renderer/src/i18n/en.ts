@@ -1206,11 +1206,81 @@ export const EN: Record<string, string> = {
   'Doppio clic per modificare la nota': 'Double-click to edit the note',
   Note: 'Notes',
   Nota: 'Note',
-  'Note sui tag': 'Tag notes'
+  'Note sui tag': 'Tag notes',
+  // Command APDU
+  'La C-APDU deve contenere almeno 4 byte esadecimali (CLA INS P1 P2)':
+    'The C-APDU must contain at least 4 hex bytes (CLA INS P1 P2)',
+  'Lc ({lc}) non coerente con la lunghezza dei dati': 'Lc ({lc}) does not match the data length',
+  'Nome del DF preso dal tag 84 della response': 'DF name taken from tag 84 of the response',
+  'AID preso dalla directory entry (4F) di «{name}»':
+    'AID taken from the directory entry (4F) of «{name}»',
+  'AID non indicato: compila il tag 84 o aggiungi prima la SELECT PPSE/PSE':
+    'AID not specified: fill in tag 84 or add the SELECT PPSE/PSE first',
+  'Selezione per nome (DF name)': 'Select by name (DF name)',
+  'Prima o unica occorrenza': 'First or only occurrence',
+  'SFI {sfi} dal tag 88 di «{name}», record {rec}':
+    'SFI {sfi} from tag 88 of «{name}», record {rec}',
+  'Nessuna SELECT PSE precedente: uso SFI 1, record 1':
+    'No previous SELECT PSE: using SFI 1, record 1',
+  "Record {rec} dell'SFI {sfi}: voce {i} di {n} dell'AFL (94) di «{name}»":
+    'Record {rec} of SFI {sfi}: entry {i} of {n} of the AFL (94) of «{name}»',
+  "Tutti i record dell'AFL sono già stati letti dalle response precedenti":
+    'All the AFL records have already been read by previous responses',
+  'Nessuna GPO precedente con AFL (94): SFI e record presi dal template':
+    'No previous GPO with an AFL (94): SFI and record taken from the template',
+  'Dati 83 costruiti dal PDOL (9F38) di «{name}»':
+    'Tag 83 data built from the PDOL (9F38) of «{name}»',
+  'Nessun PDOL nella SELECT AID precedente: template 83 vuoto':
+    'No PDOL in the previous SELECT AID: empty 83 template',
+  'Command Template (83) con i dati del PDOL': 'Command Template (83) with the PDOL data',
+  'Dati costruiti dal {dol} di «{name}»': 'Data built from the {dol} of «{name}»',
+  '{dol} non trovato nei record letti in precedenza': '{dol} not found in the records read so far',
+  'Seconda GENERATE AC della transazione: usa il CDOL2':
+    'Second GENERATE AC of the transaction: uses CDOL2',
+  'Tipo di crittogramma richiesto ricavato dal CID (9F27) della response':
+    'Requested cryptogram type derived from the CID (9F27) of the response',
+  ', firma CDA richiesta': ', CDA signature requested',
+  'Dati del {dol}': '{dol} data',
+  'Dati costruiti dal DDOL (9F49) di «{name}»': 'Data built from the DDOL (9F49) of «{name}»',
+  'Nessun DDOL nei record: uso il Default DDOL 9F3704 (Unpredictable Number)':
+    'No DDOL in the records: using the Default DDOL 9F3704 (Unpredictable Number)',
+  'Dati del DDOL': 'DDOL data',
+  'P1-P2 = tag richiesto ({tag} {name})': 'P1-P2 = requested tag ({tag} {name})',
+  'Numero del record ({n})': 'Record number ({n})',
+  'SFI {sfi} << 3 | 4 (P1 è un numero di record)': 'SFI {sfi} << 3 | 4 (P1 is a record number)',
+  'Classe proprietaria EMV': 'EMV proprietary class',
+  'Classe interindustry ISO 7816': 'ISO 7816 interindustry class',
+  '{n} byte di dati': '{n} data bytes',
+  'Tutti i byte disponibili': 'All available bytes',
+  'Comando inserito manualmente': 'Command entered manually',
+  'Comando generato dalle response precedenti del progetto':
+    'Command generated from the previous responses of the project',
+  'Hex della C-APDU (vuoto = automatica)': 'C-APDU hex (empty = automatic)',
+  'Nessun comando ricavabile da questa response': 'No command can be derived from this response',
+  'Sostituisci la C-APDU generata con una inserita a mano':
+    'Replace the generated C-APDU with one entered manually',
+  'Torna alla C-APDU generata': 'Back to the generated C-APDU',
+  Dettagli: 'Details',
+  'da «{name}»': 'from «{name}»',
+  Origine: 'Source',
+  'Ripristina il valore automatico': 'Restore the automatic value',
+  'I valori modificati valgono per tutto il progetto: lo stesso tag (es. 9F37) resta coerente tra GPO e GENERATE AC.':
+    'Edited values apply to the whole project: the same tag (e.g. 9F37) stays consistent between GPO and GENERATE AC.',
+  'Comando (C-APDU)': 'Command (C-APDU)',
+  manuale: 'manual',
+  Comando: 'Command',
+  Dati: 'Data',
+  carta: 'card',
+  zeri: 'zeros',
+  'Valore impostato nel progetto': 'Value set in the project',
+  'Valore restituito da una response precedente': 'Value returned by a previous response',
+  'Valore di default del terminale': 'Terminal default value',
+  'Dato non disponibile: riempito con zeri': 'Data not available: filled with zeros'
 }
 
 /** Strings that are the same in both languages (product names, codes, commands). */
 const NEUTRAL = [
+  'default',
   'File',
   'Template',
   'Status Word',

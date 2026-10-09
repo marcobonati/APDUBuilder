@@ -840,10 +840,130 @@ select.input {
 
 .command {
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-width: 980px;
+}
+
+.command-row {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 4px 10px;
-  margin-top: 8px;
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmd-input {
+  flex: 1;
+  min-width: 260px;
+}
+
+.cmd-hex span {
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.cmd-warnings {
+  margin: 0;
+}
+
+.command-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.cmd-notes {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.cmd-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.cmd-table th,
+.cmd-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cmd-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.cmd-table td.mono {
+  word-break: break-all;
+}
+
+.cmd-table .input {
+  width: 100%;
+  min-width: 120px;
+}
+
+.cmd-decoded {
+  color: var(--sw);
+  font-size: 11px;
+}
+
+.cmd-dol-title {
+  font-weight: 600;
+}
+
+.k-tag-text {
+  color: var(--tag);
+  font-weight: 600;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.src {
+  font-size: 10.5px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+}
+
+.src-project {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.src-card {
+  color: var(--sw);
+  border-color: var(--sw);
+}
+
+.src-zero {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.resp-cmd {
+  grid-column: 1 / -1;
+  font-size: 10.5px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .command code {

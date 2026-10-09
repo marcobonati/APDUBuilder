@@ -1,3 +1,5 @@
+import { deriveCommands } from '../emv/command'
+import type { CommandApdu } from '../emv/command'
 import { describeValue } from '../emv/formats'
 import { splitBytes } from '../emv/hex'
 import { describeSw, tagDef } from '../emv/tags'
@@ -56,7 +58,14 @@ interface DocResponse {
   name: string
   templateName: string
   templateDescription: string
-  command: { name: string; apdu: string; note: string } | null
+  command: {
+    name: string
+    apdu: string
+    manual: boolean
+    notes: string[]
+    warnings: string[]
+    dol: { title: string; items: { tag: string; name: string; value: string }[] } | null
+  } | null
   sw: string
   swDescription: string
   dataLength: number
@@ -130,7 +139,28 @@ function tlvDump(nodes: TlvNode[], depth = 0, format1 = false): string[] {
   return out
 }
 
-function buildResponse(r: ResponseDoc, labels: LabelDef[]): DocResponse {
+function docCommand(cmd: CommandApdu | null): DocResponse['command'] {
+  if (!cmd) return null
+  return {
+    name: cmd.name || t('Comando'),
+    apdu: cmd.hex,
+    manual: cmd.manual,
+    notes: cmd.notes,
+    warnings: cmd.warnings,
+    dol: cmd.dol
+      ? {
+          title: `${cmd.dol.name} (${cmd.dol.tag}) ${splitBytes(cmd.dol.hex).join(' ')}`,
+          items: cmd.dol.items.map((i) => ({
+            tag: i.tag,
+            name: tagDef(i.tag).name,
+            value: i.value
+          }))
+        }
+      : null
+  }
+}
+
+function buildResponse(r: ResponseDoc, labels: LabelDef[], cmd: CommandApdu | null): DocResponse {
   const tpl = TEMPLATES.find((x) => x.id === r.templateId)
   const enc = encodeNodes(r.nodes)
   const fields: DocField[] = []
@@ -140,14 +170,7 @@ function buildResponse(r: ResponseDoc, labels: LabelDef[]): DocResponse {
     name: r.name,
     templateName: tpl ? t(tpl.name) : t('Response importata'),
     templateDescription: tpl ? t(tpl.description) : '',
-    command:
-      tpl && tpl.command.apdu
-        ? {
-            name: t(tpl.command.name),
-            apdu: tpl.command.apdu,
-            note: tpl.command.note ? t(tpl.command.note) : ''
-          }
-        : null,
+    command: docCommand(cmd),
     sw: r.sw,
     swDescription: swValid ? describeSw(r.sw) : '',
     dataLength: enc.hex.length / 2,
@@ -163,7 +186,9 @@ export function buildDocModel(project: Project, options: DocOptions): DocModel {
   const responses = options.activeOnly
     ? project.responses.filter((r) => r.id === project.activeId)
     : project.responses
-  const docs = responses.map((r) => buildResponse(r, project.labels))
+  // Derived on the whole project: each command depends on the responses before it.
+  const commands = deriveCommands(project.responses, project.terminal)
+  const docs = responses.map((r) => buildResponse(r, project.labels, commands.get(r.id) ?? null))
   const labels = project.labels
     .map((label) => {
       const tags = new Map<string, string>()
@@ -248,14 +273,34 @@ export function toMarkdown(m: DocModel): string {
     L.push(`| ${t('Template')} | ${mdCell(r.templateName)} |`)
     if (r.command) {
       L.push(
-        `| ${t('Comando di riferimento')} | ${mdCell(r.command.name)} — \`${r.command.apdu}\`${
-          r.command.note ? ` (${mdCell(r.command.note)})` : ''
+        `| ${t('Comando (C-APDU)')} | ${mdCell(r.command.name)}${
+          r.command.manual ? ` (${t('manuale')})` : ''
         } |`
       )
     }
     L.push(`| ${t('Status Word')} | \`${r.sw}\` — ${mdCell(r.swDescription)} |`)
     L.push(`| ${t('Lunghezza dati')} | ${t('{n} byte', { n: r.dataLength })} |`, '')
     if (r.templateDescription) L.push(`> ${r.templateDescription}`, '')
+
+    if (r.command) {
+      const c = r.command
+      L.push(`### ${t('Comando (C-APDU)')}`, '', '```', wrapHex(c.apdu), '```', '')
+      for (const n of c.notes) L.push(`- ${n}`)
+      for (const w of c.warnings) L.push(`- ⚠️ ${w}`)
+      if (c.notes.length || c.warnings.length) L.push('')
+      if (c.dol) {
+        L.push(
+          `**${mdCell(c.dol.title)}**`,
+          '',
+          `| ${t('Tag')} | ${t('Nome')} | ${t('Valore')} |`,
+          '|---|---|---|'
+        )
+        for (const i of c.dol.items) {
+          L.push(`| \`${i.tag}\` | ${mdCell(i.name)} | \`${splitBytes(i.value).join(' ')}\` |`)
+        }
+        L.push('')
+      }
+    }
 
     L.push(`### ${t('Risposta RAW')}`, '', '```', wrapHex(r.hex) || '—', '```', '')
 
@@ -374,6 +419,8 @@ const CSS = `
   .lbl:first-child { margin-left: 0; }
   .note-link { text-decoration: none; margin-left: 4px; }
   table.labels td:first-child { width: 160px; }
+  table.dol td { font-size: 9.5pt; }
+  table.dol td.mono { word-break: break-all; }
   .tag-note { margin: 10px 0 14px; padding: 6px 12px 4px; border-left: 3px solid #2f66e6;
     background: #f8f9fc; break-inside: avoid-page; }
   .tag-note h4 { margin: 0 0 4px; font-size: 10.5pt; }
@@ -436,9 +483,9 @@ export function toHtml(m: DocModel): string {
     H.push(`<tr><td>${esc(t('Template'))}</td><td>${esc(r.templateName)}</td></tr>`)
     if (r.command) {
       H.push(
-        `<tr><td>${esc(t('Comando di riferimento'))}</td><td>${esc(r.command.name)} — <code>${
-          r.command.apdu
-        }</code>${r.command.note ? ` <span class="note">(${esc(r.command.note)})</span>` : ''}</td></tr>`
+        `<tr><td>${esc(t('Comando (C-APDU)'))}</td><td>${esc(r.command.name)}${
+          r.command.manual ? ` <span class="note">(${esc(t('manuale'))})</span>` : ''
+        }</td></tr>`
       )
     }
     H.push(
@@ -451,6 +498,30 @@ export function toHtml(m: DocModel): string {
     )
     H.push('</table>')
     if (r.templateDescription) H.push(`<blockquote>${esc(r.templateDescription)}</blockquote>`)
+
+    if (r.command) {
+      const c = r.command
+      H.push(`<h3>${esc(t('Comando (C-APDU)'))}</h3><pre>${esc(wrapHex(c.apdu))}</pre>`)
+      if (c.notes.length || c.warnings.length) {
+        H.push('<ul class="issues">')
+        for (const n of c.notes) H.push(`<li>${esc(n)}</li>`)
+        for (const w of c.warnings) H.push(`<li class="warning">${esc(w)}</li>`)
+        H.push('</ul>')
+      }
+      if (c.dol) {
+        H.push(`<div><b>${esc(c.dol.title)}</b></div><table class="dol"><thead><tr>`)
+        H.push(`<th>${esc(t('Tag'))}</th><th>${esc(t('Nome'))}</th><th>${esc(t('Valore'))}</th>`)
+        H.push('</tr></thead><tbody>')
+        for (const i of c.dol.items) {
+          H.push(
+            `<tr><td class="mono tag">${esc(i.tag)}</td><td>${esc(i.name)}</td><td class="mono">${esc(
+              splitBytes(i.value).join(' ')
+            )}</td></tr>`
+          )
+        }
+        H.push('</tbody></table>')
+      }
+    }
 
     H.push(`<h3>${esc(t('Risposta RAW'))}</h3><pre>${esc(wrapHex(r.hex) || '—')}</pre>`)
 

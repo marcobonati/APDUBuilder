@@ -29,6 +29,8 @@ interface FileResponse {
   name: string
   templateId: string
   sw: string
+  /** Manual C-APDU, absent when generated. */
+  command?: string
   nodes: FileNode[]
 }
 
@@ -39,6 +41,8 @@ interface ProjectFile {
   savedAt: string
   activeIndex: number
   labels?: LabelDef[]
+  /** Terminal data used in the generated commands. */
+  terminal?: Record<string, string>
   responses: FileResponse[]
 }
 
@@ -71,10 +75,12 @@ export function serializeProject(p: Project): string {
       p.responses.findIndex((r) => r.id === p.activeId)
     ),
     labels: p.labels.length ? p.labels : undefined,
+    terminal: p.terminal && Object.keys(p.terminal).length ? p.terminal : undefined,
     responses: p.responses.map((r) => ({
       name: r.name,
       templateId: r.templateId,
       sw: r.sw,
+      command: r.command || undefined,
       nodes: r.nodes.map(toFileNode)
     }))
   }
@@ -147,23 +153,33 @@ export function parseProject(text: string): Project {
     if (!isObj(r)) throw new Error(`${where}: ${t('formato non valido')}`)
     if (!Array.isArray(r.nodes)) throw new Error(`${where}: ${t('"nodes" mancante')}`)
     const sw = hex(r.sw)
+    const command = hex(r.command)
     return {
       id: newId(),
       name: str(r.name, where) || where,
       templateId: str(r.templateId, 'import'),
       sw: /^[0-9A-F]{4}$/.test(sw) ? sw : '9000',
+      command: /^([0-9A-F]{2}){4,}$/.test(command) ? command : undefined,
       nodes: r.nodes.map((n: unknown, j: number) =>
         fromFileNode(n, `${where}, ${t('nodo')} ${j + 1}`, labelIds)
       ),
       touched: true
     }
   })
+  const terminal: Record<string, string> = {}
+  if (isObj(data.terminal)) {
+    for (const [tag, v] of Object.entries(data.terminal)) {
+      const value = hex(v)
+      if (/^([0-9A-F]{2})+$/.test(tag) && /^([0-9A-F]{2})*$/.test(value)) terminal[tag] = value
+    }
+  }
   const idx = typeof data.activeIndex === 'number' ? data.activeIndex : 0
   return {
     name: str(data.name) || t('Progetto'),
     responses,
     activeId: (responses[idx] ?? responses[0]).id,
-    labels
+    labels,
+    terminal: Object.keys(terminal).length ? terminal : undefined
   }
 }
 
