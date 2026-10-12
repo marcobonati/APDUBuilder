@@ -71,7 +71,7 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = [
   { id: 'Altro', desc: 'Risposte libere o di solo errore' }
 ]
 
-const INS_NAMES: Record<string, string> = {
+export const INS_NAMES: Record<string, string> = {
   A4: 'SELECT',
   B2: 'READ RECORD',
   A8: 'GET PROCESSING OPTIONS',

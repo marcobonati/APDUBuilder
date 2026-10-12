@@ -14,6 +14,8 @@ export interface ResponseDoc extends Doc {
   name: string
   /** False until the user edits it: an untouched response is replaced by a new template. */
   touched?: boolean
+  /** C-APDU entered by the user (hex). Absent: generated from the project flow. */
+  command?: string
 }
 
 /** Custom label that can be applied to tags (e.g. Dynamic, Static). */
@@ -40,6 +42,8 @@ export interface Project {
   responses: ResponseDoc[]
   activeId: string
   labels: LabelDef[]
+  /** Terminal data used to fill the DOLs of the generated commands, by tag. */
+  terminal?: Record<string, string>
 }
 
 export interface State {
@@ -75,6 +79,9 @@ export type Action =
   | { type: 'deleteResponse'; id: string }
   | { type: 'moveResponse'; id: string; dir: -1 | 1 }
   | { type: 'renameProject'; name: string }
+  // Command APDUs
+  | { type: 'setCommand'; id: string; command: string | null }
+  | { type: 'setTerminalValue'; tag: string; value: string | null }
   // Labels
   | { type: 'addLabel'; label: LabelDef; applyTo?: string }
   | { type: 'updateLabel'; id: string; patch: Partial<Omit<LabelDef, 'id'>> }
@@ -327,6 +334,24 @@ export function reducer(s: State, a: Action): State {
       })
     case 'renameProject':
       return commit(s, { ...p, name: a.name }, 'project-name')
+
+    case 'setCommand':
+      return commit(
+        s,
+        {
+          ...p,
+          responses: p.responses.map((r) =>
+            r.id === a.id ? { ...r, command: a.command ?? undefined, touched: true } : r
+          )
+        },
+        `command:${a.id}`
+      )
+    case 'setTerminalValue': {
+      const terminal = { ...p.terminal }
+      if (a.value === null) delete terminal[a.tag]
+      else terminal[a.tag] = a.value
+      return commit(s, { ...p, terminal }, `terminal:${a.tag}`)
+    }
 
     case 'addLabel': {
       // Optionally applied right away to the node it was created from (one undo step).
