@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from 'react'
+import type { CommandApdu } from '../emv/command'
 import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
 import FileMenu from './FileMenu'
@@ -27,6 +28,8 @@ function labelUsage(project: Project): Map<string, number> {
 
 interface Props {
   project: Project
+  /** C-APDU of each response, by response id. */
+  commands: Map<string, CommandApdu | null>
   filePath: string | null
   dirty: boolean
   onSelectTemplate: (t: ResponseTemplate) => void
@@ -38,11 +41,14 @@ interface Props {
 
 const ResponseItem = memo(function ResponseItem({
   r,
+  command,
   active,
   index,
   count
 }: {
   r: ResponseDoc
+  /** C-APDU that produces the response, '' when unknown. */
+  command: string
   active: boolean
   index: number
   count: number
@@ -81,6 +87,11 @@ const ResponseItem = memo(function ResponseItem({
       <span className="resp-meta mono">
         {bytes} B · {r.sw}
       </span>
+      {command && (
+        <span className="resp-cmd mono" title={command}>
+          → {command}
+        </span>
+      )}
       <span className="resp-actions" onClick={(e) => e.stopPropagation()}>
         <button className="icon-btn" title={t('Rinomina')} onClick={() => setEditing(true)}>
           ✎
@@ -178,6 +189,7 @@ export default memo(function Sidebar(props: Props): React.JSX.Element {
                 <ResponseItem
                   key={r.id}
                   r={r}
+                  command={props.commands.get(r.id)?.hex ?? ''}
                   active={r.id === project.activeId}
                   index={i}
                   count={project.responses.length}

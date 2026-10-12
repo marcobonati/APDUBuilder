@@ -8,12 +8,14 @@ import {
   useState
 } from 'react'
 import AddTagMenu from './components/AddTagMenu'
+import CommandPanel from './components/CommandPanel'
 import ExportDocDialog from './components/ExportDocDialog'
 import HelpPanel from './components/HelpPanel'
 import ImportDialog from './components/ImportDialog'
 import NodeCard from './components/NodeCard'
 import RawPanel from './components/RawPanel'
 import Sidebar from './components/Sidebar'
+import { deriveCommands } from './emv/command'
 import { TEMPLATES, buildNodes } from './emv/templates'
 import type { ResponseTemplate } from './emv/templates'
 import { encodeNodes } from './emv/tlv'
@@ -131,6 +133,12 @@ function App(): React.JSX.Element {
   const dirty = isDirty(state)
 
   const encoded = useMemo(() => encodeNodes(active.nodes), [active.nodes])
+  // Each command depends on the responses before it, so the whole project is derived at once.
+  const commands = useMemo(
+    () => deriveCommands(state.project.responses, state.project.terminal),
+    // lang: notes and warnings are translated when generated.
+    [state.project.responses, state.project.terminal, lang] // eslint-disable-line react-hooks/exhaustive-deps
+  )
   const issues = useMemo(
     () => validate(active.nodes, active.sw, encoded.hex.length / 2),
     // lang: issue messages are translated when generated.
@@ -340,6 +348,7 @@ function App(): React.JSX.Element {
       <div className={`app ${helpOpen ? 'with-help' : ''}`}>
         <Sidebar
           project={state.project}
+          commands={commands}
           filePath={state.filePath}
           dirty={dirty}
           onSelectTemplate={selectTemplate}
@@ -362,17 +371,7 @@ function App(): React.JSX.Element {
                       'Response ricostruita da dati esadecimali. Puoi modificare, aggiungere o rimuovere tag.'
                     )}
               </p>
-              {template && template.command.apdu && (
-                <div className="command">
-                  <span className="muted small">
-                    {t('Comando di riferimento')} · {t(template.command.name)}
-                  </span>
-                  <code className="mono">{template.command.apdu}</code>
-                  {template.command.note && (
-                    <span className="muted small">{t(template.command.note)}</span>
-                  )}
-                </div>
-              )}
+              <CommandPanel responseId={active.id} cmd={commands.get(active.id) ?? null} />
             </div>
             <div className="toolbar">
               <div className="progress" title={t('Campi obbligatori compilati')}>
