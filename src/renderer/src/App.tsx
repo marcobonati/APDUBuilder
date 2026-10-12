@@ -434,7 +434,14 @@ function App(): React.JSX.Element {
             </div>
           </header>
 
-          <div className="tree" onMouseLeave={() => setHovered(null)}>
+          <div
+            className="tree"
+            onMouseLeave={() => setHovered(null)}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                view.set({ drop: null })
+            }}
+          >
             {active.nodes.length === 0 && (
               <div className="empty-state">
                 {active.sw !== '9000'
