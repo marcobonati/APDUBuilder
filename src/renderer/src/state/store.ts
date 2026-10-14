@@ -58,6 +58,9 @@ export interface State {
   lastEdit: string | null
 }
 
+/** Where a dragged node lands relative to the target: as a sibling or as its last child. */
+export type DropPos = 'before' | 'after' | 'inside'
+
 export type Action =
   // Active response content
   | { type: 'load'; doc: Doc; name: string }
@@ -65,6 +68,7 @@ export type Action =
   | { type: 'add'; parentId: string | null; node: TlvNode }
   | { type: 'remove'; id: string }
   | { type: 'move'; id: string; dir: -1 | 1 }
+  | { type: 'moveTo'; id: string; target: string; pos: DropPos }
   | { type: 'duplicate'; id: string }
   | { type: 'setSw'; sw: string }
   | { type: 'fillExamples' }
@@ -146,6 +150,22 @@ function swap<T>(l: T[], i: number, dir: -1 | 1): T[] {
   const out = [...l]
   ;[out[i], out[j]] = [out[j], out[i]]
   return out
+}
+
+/** Moves node id next to (or inside) target. No-op when target is id or one of its descendants. */
+function moveNode(nodes: TlvNode[], id: string, target: string, pos: DropPos): TlvNode[] {
+  const node = findNode(nodes, id)
+  if (!node || id === target || findNode(node.children, target)) return nodes
+  const rest = editSiblings(nodes, id, (l, i) => l.filter((_, j) => j !== i))
+  if (pos === 'inside') {
+    return mapTree(rest, (n) =>
+      n.id === target ? { ...n, collapsed: false, children: [...n.children, node] } : n
+    )
+  }
+  return editSiblings(rest, target, (l, i) => {
+    const at = pos === 'before' ? i : i + 1
+    return [...l.slice(0, at), node, ...l.slice(at)]
+  })
 }
 
 function cloneWithNewIds(n: TlvNode): TlvNode {
@@ -244,6 +264,10 @@ export function reducer(s: State, a: Action): State {
       return editActive(s, (r) => ({
         nodes: editSiblings(r.nodes, a.id, (l, i) => swap(l, i, a.dir))
       }))
+    case 'moveTo': {
+      const nodes = moveNode(activeResponse(p).nodes, a.id, a.target, a.pos)
+      return nodes === activeResponse(p).nodes ? s : editActive(s, () => ({ nodes }))
+    }
     case 'duplicate':
       return editActive(s, (r) => ({
         nodes: editSiblings(r.nodes, a.id, (l, i) => [

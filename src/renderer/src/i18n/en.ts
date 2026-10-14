@@ -1,6 +1,11 @@
 // English translations. Keys are the Italian source strings (see ./index.ts).
 
 export const EN: Record<string, string> = {
+  Proprietà: 'Property',
+  Avviso: 'Warning',
+  Errore: 'Error',
+  'Trascina per ridimensionare, doppio clic per ripristinare':
+    'Drag to resize, double-click to reset',
   "Numero identificativo dell'issuer (prime cifre del PAN).":
     'Issuer identification number (leading digits of the PAN).',
   "Nome mnemonico dell'applicazione, mostrato al titolare (max 16 caratteri).":
@@ -407,6 +412,13 @@ export const EN: Record<string, string> = {
     'Length computed automatically. Click to force it (negative tests).',
   'Sposta su': 'Move up',
   'Sposta giù': 'Move down',
+  'Trascina per spostare il tag': 'Drag to move the tag',
+  'Cerca tag': 'Search tags',
+  'Cerca tag per codice, nome, valore, nota o label':
+    'Search tags by code, name, value, note or label',
+  Cancella: 'Clear',
+  '{n} risultati': '{n} results',
+  'Nessun tag trovato': 'No tags found',
   Duplica: 'Duplicate',
   Rimuovi: 'Remove',
   'Forza lunghezza manuale': 'Force manual length',

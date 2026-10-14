@@ -13,6 +13,7 @@ import {
 import type { TlvNode } from '../emv/types'
 import { t } from '../i18n'
 import { useEditor, useViewState } from '../state/context'
+import type { DropPos } from '../state/store'
 import type { Issue } from '../emv/validate'
 import AddTagMenu from './AddTagMenu'
 import { LabelChip, LabelPicker } from './Labels'
@@ -82,6 +83,21 @@ function TagBadge({ node }: { node: TlvNode }): React.JSX.Element {
 
 const NO_ISSUES: Issue[] = []
 
+function subtreeIds(n: TlvNode, out = new Set<string>()): Set<string> {
+  out.add(n.id)
+  for (const c of n.children) subtreeIds(c, out)
+  return out
+}
+
+/** Drop position from the pointer: edges insert as sibling, the middle of a container nests. */
+function dropPos(e: React.DragEvent<HTMLElement>, container: boolean): DropPos {
+  const r = e.currentTarget.getBoundingClientRect()
+  const y = e.clientY - r.top
+  if (!container) return y < r.height / 2 ? 'before' : 'after'
+  const edge = Math.min(r.height / 3, 14)
+  return y < edge ? 'before' : y > r.height - edge ? 'after' : 'inside'
+}
+
 /**
  * Memoized: the tree is immutable and unchanged subtrees keep their identity,
  * so an edit re-renders only the path from the root to the edited node.
@@ -98,6 +114,8 @@ const NodeCard = memo(function NodeCard({
   const sel = useViewState((s) => s.selected === node.id)
   const scrollTarget = useViewState((s) => (s.scrollTarget?.id === node.id ? s.scrollTarget : null))
   const issues = useViewState((s) => s.issuesByNode.get(node.id) ?? NO_ISSUES)
+  const dragging = useViewState((s) => s.drag?.id === node.id)
+  const drop = useViewState((s) => (s.drop?.id === node.id ? s.drop.pos : null))
   const ref = useRef<HTMLDivElement>(null)
   const def = tagDef(node.tag)
   const container = hasChildren(node)
@@ -133,8 +151,33 @@ const NodeCard = memo(function NodeCard({
         sel ? 'sel' : '',
         worst ? `has-${worst}` : '',
         empty && node.required ? 'todo' : '',
-        omitted ? 'omitted' : ''
+        omitted ? 'omitted' : '',
+        dragging ? 'dragging' : '',
+        drop ? `drop-${drop}` : ''
       ].join(' ')}
+      onDragOver={(e) => {
+        const drag = view.get().drag
+        if (!drag) return
+        // Innermost card wins; the dragged subtree is not a valid target.
+        e.stopPropagation()
+        if (drag.subtree.has(node.id)) {
+          view.set({ drop: null })
+          return
+        }
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        const pos = dropPos(e, container)
+        const cur = view.get().drop
+        if (cur?.id !== node.id || cur.pos !== pos) view.set({ drop: { id: node.id, pos } })
+      }}
+      onDrop={(e) => {
+        const { drag, drop } = view.get()
+        if (!drag || !drop) return
+        e.preventDefault()
+        e.stopPropagation()
+        dispatch({ type: 'moveTo', id: drag.id, target: drop.id, pos: drop.pos })
+        view.set({ drag: null, drop: null })
+      }}
       onMouseOver={(e) => {
         e.stopPropagation()
         if (view.get().hovered !== node.id) setHovered(node.id)
@@ -145,6 +188,22 @@ const NodeCard = memo(function NodeCard({
       }}
     >
       <div className="node-head">
+        <span
+          className="drag-handle"
+          draggable
+          title={t('Trascina per spostare il tag')}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.stopPropagation()
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', node.tag)
+            if (ref.current) e.dataTransfer.setDragImage(ref.current, 12, 12)
+            view.set({ drag: { id: node.id, subtree: subtreeIds(node) }, drop: null })
+          }}
+          onDragEnd={() => view.set({ drag: null, drop: null })}
+        >
+          ⠿
+        </span>
         {container && (
           <button
             className="caret"
