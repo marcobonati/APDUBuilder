@@ -10,7 +10,7 @@ import { validate } from '../emv/validate'
 import type { Issue } from '../emv/validate'
 import { getLang, t } from '../i18n'
 import type { LabelDef, Project, ResponseDoc } from '../state/store'
-import { demoteHeadings, renderMarkdown } from './markdown'
+import { renderMarkdown } from './markdown'
 
 // ---------------- Model ----------------
 
@@ -72,8 +72,6 @@ interface DocResponse {
   /** Data followed by the status word. */
   hex: string
   fields: DocField[]
-  /** Fields with a note, in tree order. */
-  notes: DocField[]
   dump: string
   issues: Issue[]
 }
@@ -176,7 +174,6 @@ function buildResponse(r: ResponseDoc, labels: LabelDef[], cmd: CommandApdu | nu
     dataLength: enc.hex.length / 2,
     hex: enc.hex + (swValid ? r.sw : ''),
     fields,
-    notes: fields.filter((f) => f.note),
     dump: tlvDump(r.nodes).join('\n'),
     issues: validate(r.nodes, r.sw, enc.hex.length / 2).filter((i) => i.level !== 'info')
   }
@@ -229,15 +226,16 @@ function anchor(i: number): string {
   return `response-${i + 1}`
 }
 
-function noteAnchor(i: number, k: number): string {
-  return `note-${i + 1}-${k + 1}`
-}
-
 // ---------------- Markdown ----------------
 
 /** Escapes text placed in a Markdown table cell. */
 function mdCell(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>')
+}
+
+/** A note rendered to HTML on a single line, so it fits in a Markdown table cell. */
+function mdNote(note: string): string {
+  return renderMarkdown(note).replace(/>\n</g, '><').replace(/\n/g, '<br>').replace(/\|/g, '&#124;')
 }
 
 export function toMarkdown(m: DocModel): string {
@@ -269,7 +267,7 @@ export function toMarkdown(m: DocModel): string {
   m.responses.forEach((r, i) => {
     L.push(`<a id="${anchor(i)}"></a>`, '')
     L.push(`## ${i + 1}. ${r.name}`, '')
-    L.push(`| | |`, `|---|---|`)
+    L.push(`| ${t('Proprietà')} | ${t('Valore')} |`, `|---|---|`)
     L.push(`| ${t('Template')} | ${mdCell(r.templateName)} |`)
     if (r.command) {
       L.push(
@@ -286,7 +284,7 @@ export function toMarkdown(m: DocModel): string {
       const c = r.command
       L.push(`### ${t('Comando (C-APDU)')}`, '', '```', wrapHex(c.apdu), '```', '')
       for (const n of c.notes) L.push(`- ${n}`)
-      for (const w of c.warnings) L.push(`- ⚠️ ${w}`)
+      for (const w of c.warnings) L.push(`- **${t('Avviso')}:** ${w}`)
       if (c.notes.length || c.warnings.length) L.push('')
       if (c.dol) {
         L.push(
@@ -313,22 +311,21 @@ export function toMarkdown(m: DocModel): string {
       )
       L.push('|---|---|---|---|---|')
       for (const f of r.fields) {
-        const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(f.depth) + (f.depth ? '↳ ' : '')
+        const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(f.depth)
         const chips =
           o.includeLabels && f.labels.length
             ? ' ' + f.labels.map((l) => `\`${mdCell(l.name)}\``).join(' ')
             : ''
-        const k = r.notes.indexOf(f)
-        const noteLink = o.includeNotes && k >= 0 ? ` [📝](#${noteAnchor(i, k)})` : ''
-        const name = `${indent}${mdCell(f.name)}${f.required ? ' *' : ''}${chips}${noteLink}`
+        const name = `${indent}${mdCell(f.name)}${f.required ? ' *' : ''}${chips}`
         const len = f.lengthHex
-          ? `${f.lengthHex}${f.forcedLength ? ' ⚠' : ''} (${f.length})`
+          ? `${f.lengthHex} (${f.length})${f.forcedLength ? `<br>_${t('lunghezza forzata')}_` : ''}`
           : `${f.length}`
         const value = f.template ? '' : f.value ? `\`${shortValue(f.value)}\`` : '—'
         const meaning = [
           f.decoded ? `**${mdCell(f.decoded)}**` : '',
           o.includeDescriptions ? mdCell(f.description) : '',
-          o.includeDescriptions && f.hint ? `_${mdCell(f.hint)}_` : ''
+          o.includeDescriptions && f.hint ? `_${mdCell(f.hint)}_` : '',
+          o.includeNotes && f.note ? `<strong>${t('Nota')}:</strong> ${mdNote(f.note)}` : ''
         ]
           .filter(Boolean)
           .join('<br>')
@@ -337,25 +334,13 @@ export function toMarkdown(m: DocModel): string {
       L.push('', `\\* ${t('campo obbligatorio nel template')}`, '')
     }
 
-    if (o.includeNotes && r.notes.length) {
-      L.push(`### ${t('Note')}`, '')
-      r.notes.forEach((f, k) => {
-        L.push(`<a id="${noteAnchor(i, k)}"></a>`, '')
-        L.push(`#### ${f.tag ? `\`${f.tag}\` ` : ''}${f.name}`, '')
-        if (o.includeLabels && f.labels.length) {
-          L.push(f.labels.map((l) => `\`${l.name}\``).join(' '), '')
-        }
-        L.push(demoteHeadings(f.note, 4), '')
-      })
-    }
-
     if (o.includeTlvDump && r.dump) {
       L.push(`### ${t('Struttura TLV')}`, '', '```', r.dump, '```', '')
     }
     if (o.includeIssues && r.issues.length) {
       L.push(`### ${t('Verifica')}`, '')
       for (const is of r.issues) {
-        L.push(`- ${is.level === 'error' ? '❌' : '⚠️'} ${is.message}`)
+        L.push(`- **${is.level === 'error' ? t('Errore') : t('Avviso')}:** ${is.message}`)
       }
       L.push('')
     }
@@ -409,6 +394,7 @@ const CSS = `
   .hint { color: #8a6100; font-style: italic; }
   .req { color: #b07a00; }
   .forced { color: #d43c3c; }
+  div.forced { font-size: 8.5pt; }
   ul.issues { margin: 4px 0; padding-left: 18px; }
   ul.issues li.error { color: #d43c3c; }
   ul.issues li.warning { color: #8a6100; }
@@ -417,13 +403,14 @@ const CSS = `
     margin: 1px 0 1px 4px; border-radius: 8px; border: 1px solid var(--lc);
     color: var(--lc); background: color-mix(in srgb, var(--lc) 12%, #fff); white-space: nowrap; }
   .lbl:first-child { margin-left: 0; }
-  .note-link { text-decoration: none; margin-left: 4px; }
   table.labels td:first-child { width: 160px; }
   table.dol td { font-size: 9.5pt; }
   table.dol td.mono { word-break: break-all; }
-  .tag-note { margin: 10px 0 14px; padding: 6px 12px 4px; border-left: 3px solid #2f66e6;
-    background: #f8f9fc; break-inside: avoid-page; }
-  .tag-note h4 { margin: 0 0 4px; font-size: 10.5pt; }
+  .fields tr.note-row td { border-top-style: hidden; padding-top: 0; }
+  .tag-note { padding: 4px 10px 2px; border-left: 3px solid #2f66e6; background: #f8f9fc;
+    break-inside: avoid-page; }
+  .note-label { font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    color: #545c6b; margin-bottom: 2px; }
   .md > :first-child { margin-top: 0; }
   .md p, .md ul, .md ol, .md table, .md pre, .md blockquote { margin: 4px 0 6px; }
   .md ul, .md ol { padding-left: 20px; }
@@ -505,7 +492,9 @@ export function toHtml(m: DocModel): string {
       if (c.notes.length || c.warnings.length) {
         H.push('<ul class="issues">')
         for (const n of c.notes) H.push(`<li>${esc(n)}</li>`)
-        for (const w of c.warnings) H.push(`<li class="warning">${esc(w)}</li>`)
+        for (const w of c.warnings) {
+          H.push(`<li class="warning"><b>${esc(t('Avviso'))}:</b> ${esc(w)}</li>`)
+        }
         H.push('</ul>')
       }
       if (c.dol) {
@@ -535,14 +524,10 @@ export function toHtml(m: DocModel): string {
       H.push('</tr></thead><tbody>')
       for (const f of r.fields) {
         const pad = f.depth * 14
-        const k = r.notes.indexOf(f)
-        const extra =
-          (o.includeLabels && f.labels.length ? ` ${htmlLabels(f.labels)}` : '') +
-          (o.includeNotes && k >= 0
-            ? ` <a class="note-link" href="#${noteAnchor(i, k)}" title="${esc(t('Nota'))}">📝</a>`
-            : '')
+        const extra = o.includeLabels && f.labels.length ? ` ${htmlLabels(f.labels)}` : ''
         const len = f.lengthHex
-          ? `<span class="mono${f.forcedLength ? ' forced' : ''}">${f.lengthHex}</span> (${f.length})`
+          ? `<span class="mono${f.forcedLength ? ' forced' : ''}">${f.lengthHex}</span> (${f.length})` +
+            (f.forcedLength ? `<div class="forced">${esc(t('lunghezza forzata'))}</div>` : '')
           : `${f.length}`
         const meaning = [
           f.decoded ? `<div class="decoded">${esc(f.decoded)}</div>` : '',
@@ -553,29 +538,24 @@ export function toHtml(m: DocModel): string {
         ].join('')
         H.push(
           `<tr class="${f.template ? 'tpl' : ''}"><td class="mono tag">${f.tag || 'RAW'}</td>` +
-            `<td style="padding-left:${6 + pad}px">${f.depth ? '↳ ' : ''}${esc(f.name)}${
+            `<td style="padding-left:${6 + pad}px">${esc(f.name)}${
               f.required ? ' <span class="req">*</span>' : ''
             }${extra}</td>` +
             `<td>${len}</td>` +
             `<td class="mono">${f.template ? '' : f.value ? esc(shortValue(f.value)) : '—'}</td>` +
             `<td>${meaning}</td></tr>`
         )
+        if (o.includeNotes && f.note) {
+          H.push(
+            `<tr class="note-row"><td></td><td colspan="4" style="padding-left:${6 + pad}px">` +
+              `<div class="tag-note"><div class="note-label">${esc(t('Nota'))}</div>` +
+              `<div class="md">${renderMarkdown(f.note)}</div></div></td></tr>`
+          )
+        }
       }
       H.push(
         `</tbody></table><div class="note">* ${esc(t('campo obbligatorio nel template'))}</div>`
       )
-    }
-
-    if (o.includeNotes && r.notes.length) {
-      H.push(`<h3>${esc(t('Note'))}</h3>`)
-      r.notes.forEach((f, k) => {
-        H.push(
-          `<div class="tag-note" id="${noteAnchor(i, k)}"><h4>${
-            f.tag ? `<span class="mono tag">${esc(f.tag)}</span> ` : ''
-          }${esc(f.name)}${o.includeLabels ? ` ${htmlLabels(f.labels)}` : ''}</h4>` +
-            `<div class="md">${renderMarkdown(f.note)}</div></div>`
-        )
-      })
     }
 
     if (o.includeTlvDump && r.dump) {
@@ -583,7 +563,11 @@ export function toHtml(m: DocModel): string {
     }
     if (o.includeIssues && r.issues.length) {
       H.push(`<h3>${esc(t('Verifica'))}</h3><ul class="issues">`)
-      for (const is of r.issues) H.push(`<li class="${is.level}">${esc(is.message)}</li>`)
+      for (const is of r.issues) {
+        H.push(
+          `<li class="${is.level}"><b>${esc(is.level === 'error' ? t('Errore') : t('Avviso'))}:</b> ${esc(is.message)}</li>`
+        )
+      }
       H.push('</ul>')
     }
     H.push('</section>')

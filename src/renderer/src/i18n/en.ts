@@ -1,6 +1,9 @@
 // English translations. Keys are the Italian source strings (see ./index.ts).
 
 export const EN: Record<string, string> = {
+  Proprietà: 'Property',
+  Avviso: 'Warning',
+  Errore: 'Error',
   'Trascina per ridimensionare, doppio clic per ripristinare':
     'Drag to resize, double-click to reset',
   "Numero identificativo dell'issuer (prime cifre del PAN).":
