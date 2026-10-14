@@ -73,6 +73,19 @@ function initialHelpOpen(): boolean {
   }
 }
 
+const SIDEBAR_KEY = 'emv-apdu-builder:sidebar-width'
+const SIDEBAR_MIN = 200
+const SIDEBAR_MAX = 600
+
+function initialSidebarWidth(): number | null {
+  try {
+    const w = Number(localStorage.getItem(SIDEBAR_KEY))
+    return w >= SIDEBAR_MIN && w <= SIDEBAR_MAX ? w : null
+  } catch {
+    return null
+  }
+}
+
 type Command = MenuCommandEvent['cmd']
 
 interface Toast {
@@ -124,6 +137,45 @@ function App(): React.JSX.Element {
       }
       return !open
     })
+  }, [])
+  // null keeps the layout's default width.
+  const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth)
+  const startSidebarResize = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const handle = e.currentTarget
+    const sidebar = handle.previousElementSibling
+    if (!sidebar) return
+    e.preventDefault()
+    handle.setPointerCapture(e.pointerId)
+    const startX = e.clientX
+    const startW = sidebar.getBoundingClientRect().width
+    let width = startW
+    document.body.classList.add('col-resizing')
+    const move = (ev: PointerEvent): void => {
+      width = Math.round(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + ev.clientX - startX)))
+      setSidebarWidth(width)
+    }
+    const up = (): void => {
+      handle.removeEventListener('pointermove', move)
+      handle.removeEventListener('pointerup', up)
+      handle.removeEventListener('pointercancel', up)
+      document.body.classList.remove('col-resizing')
+      try {
+        localStorage.setItem(SIDEBAR_KEY, String(width))
+      } catch {
+        // Only a preference.
+      }
+    }
+    handle.addEventListener('pointermove', move)
+    handle.addEventListener('pointerup', up)
+    handle.addEventListener('pointercancel', up)
+  }, [])
+  const resetSidebarWidth = useCallback(() => {
+    setSidebarWidth(null)
+    try {
+      localStorage.removeItem(SIDEBAR_KEY)
+    } catch {
+      // Only a preference.
+    }
   }, [])
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -345,7 +397,12 @@ function App(): React.JSX.Element {
 
   return (
     <EditorContext.Provider value={ctx}>
-      <div className={`app ${helpOpen ? 'with-help' : ''}`}>
+      <div
+        className={`app ${helpOpen ? 'with-help' : ''}`}
+        style={
+          sidebarWidth ? ({ '--sidebar-w': `${sidebarWidth}px` } as React.CSSProperties) : undefined
+        }
+      >
         <Sidebar
           project={state.project}
           commands={commands}
@@ -355,6 +412,14 @@ function App(): React.JSX.Element {
           onCommand={fire}
           recent={recent}
           onLang={changeLang}
+        />
+        <div
+          className="sidebar-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          title={t('Trascina per ridimensionare, doppio clic per ripristinare')}
+          onPointerDown={startSidebarResize}
+          onDoubleClick={resetSidebarWidth}
         />
 
         <main className="editor">
@@ -434,7 +499,14 @@ function App(): React.JSX.Element {
             </div>
           </header>
 
-          <div className="tree" onMouseLeave={() => setHovered(null)}>
+          <div
+            className="tree"
+            onMouseLeave={() => setHovered(null)}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                view.set({ drop: null })
+            }}
+          >
             {active.nodes.length === 0 && (
               <div className="empty-state">
                 {active.sw !== '9000'

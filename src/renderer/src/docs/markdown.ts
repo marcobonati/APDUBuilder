@@ -185,20 +185,3 @@ function renderBlocks(lines: string[]): string {
 export function renderMarkdown(src: string): string {
   return renderBlocks(src.replace(/\r\n?/g, '\n').split('\n'))
 }
-
-/**
- * Shifts the headings of a Markdown text by `by` levels (max 6), so that a
- * note embedded in a larger document does not break its outline.
- */
-export function demoteHeadings(src: string, by: number): string {
-  let fenced = false
-  return src
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((l) => {
-      if (FENCE.test(l)) fenced = !fenced
-      if (fenced) return l
-      return l.replace(/^(#{1,6})(?=\s)/, (h) => '#'.repeat(Math.min(6, h.length + by)))
-    })
-    .join('\n')
-}

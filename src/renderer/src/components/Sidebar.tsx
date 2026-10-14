@@ -4,6 +4,7 @@ import type { ResponseTemplate } from '../emv/templates'
 import { encodeNodes } from '../emv/tlv'
 import FileMenu from './FileMenu'
 import { LabelManager } from './Labels'
+import TagSearch from './TagSearch'
 import TemplatePicker from './TemplatePicker'
 import type { MenuCommandEvent, RecentFile } from '../../../preload/index.d'
 import { LANGS, t } from '../i18n'
@@ -142,6 +143,7 @@ export default memo(function Sidebar(props: Props): React.JSX.Element {
   const [showResponses, setShowResponses] = useState(true)
   const [showTemplates, setShowTemplates] = useState(true)
   const [showLabels, setShowLabels] = useState(true)
+  const [searching, setSearching] = useState(false)
   const usage = useMemo(() => labelUsage(project), [project])
 
   return (
@@ -177,57 +179,68 @@ export default memo(function Sidebar(props: Props): React.JSX.Element {
       </div>
 
       <div className="sidebar-scroll">
-        <section className="side-section">
-          <button className="side-section-head" onClick={() => setShowResponses(!showResponses)}>
-            <span className="tpl-caret">{showResponses ? '▾' : '▸'}</span>
-            <span className="side-section-title">{t('Response del progetto')}</span>
-            <span className="tpl-count">{project.responses.length}</span>
-          </button>
-          {showResponses && (
-            <div className="side-section-body">
-              {project.responses.map((r, i) => (
-                <ResponseItem
-                  key={r.id}
-                  r={r}
-                  command={props.commands.get(r.id)?.hex ?? ''}
-                  active={r.id === project.activeId}
-                  index={i}
-                  count={project.responses.length}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        <TagSearch project={project} onQuery={setSearching} />
+        {!searching && (
+          <>
+            <section className="side-section">
+              <button
+                className="side-section-head"
+                onClick={() => setShowResponses(!showResponses)}
+              >
+                <span className="tpl-caret">{showResponses ? '▾' : '▸'}</span>
+                <span className="side-section-title">{t('Response del progetto')}</span>
+                <span className="tpl-count">{project.responses.length}</span>
+              </button>
+              {showResponses && (
+                <div className="side-section-body">
+                  {project.responses.map((r, i) => (
+                    <ResponseItem
+                      key={r.id}
+                      r={r}
+                      command={props.commands.get(r.id)?.hex ?? ''}
+                      active={r.id === project.activeId}
+                      index={i}
+                      count={project.responses.length}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
 
-        <section className="side-section">
-          <button className="side-section-head" onClick={() => setShowLabels(!showLabels)}>
-            <span className="tpl-caret">{showLabels ? '▾' : '▸'}</span>
-            <span className="side-section-title">{t('Label')}</span>
-            <span className="tpl-count">{project.labels.length}</span>
-          </button>
-          {showLabels && (
-            <div className="side-section-body">
-              <LabelManager usage={usage} />
-            </div>
-          )}
-        </section>
+            <section className="side-section">
+              <button className="side-section-head" onClick={() => setShowLabels(!showLabels)}>
+                <span className="tpl-caret">{showLabels ? '▾' : '▸'}</span>
+                <span className="side-section-title">{t('Label')}</span>
+                <span className="tpl-count">{project.labels.length}</span>
+              </button>
+              {showLabels && (
+                <div className="side-section-body">
+                  <LabelManager usage={usage} />
+                </div>
+              )}
+            </section>
 
-        <section className="side-section">
-          <button className="side-section-head" onClick={() => setShowTemplates(!showTemplates)}>
-            <span className="tpl-caret">{showTemplates ? '▾' : '▸'}</span>
-            <span className="side-section-title">{t('Template di risposta')}</span>
-          </button>
-          {showTemplates && (
-            <div className="side-section-body">
-              <div className="muted small tpl-help">
-                {t(
-                  'Aggiunge una response al progetto (sostituisce quella attiva se non è ancora stata modificata).'
-                )}
-              </div>
-              <TemplatePicker onSelect={props.onSelectTemplate} />
-            </div>
-          )}
-        </section>
+            <section className="side-section">
+              <button
+                className="side-section-head"
+                onClick={() => setShowTemplates(!showTemplates)}
+              >
+                <span className="tpl-caret">{showTemplates ? '▾' : '▸'}</span>
+                <span className="side-section-title">{t('Template di risposta')}</span>
+              </button>
+              {showTemplates && (
+                <div className="side-section-body">
+                  <div className="muted small tpl-help">
+                    {t(
+                      'Aggiunge una response al progetto (sostituisce quella attiva se non è ancora stata modificata).'
+                    )}
+                  </div>
+                  <TemplatePicker onSelect={props.onSelectTemplate} />
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </nav>
   )

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { Issue } from '../emv/validate'
+import type { DropPos } from './store'
 
 /** What the help panel documents: a node of the tree, or just a tag (DOL entries, menus). */
 export interface HelpTarget {
@@ -20,6 +21,10 @@ export interface ViewState {
   scrollTarget: { id: string; n: number } | null
   helpTarget: HelpTarget | null
   issuesByNode: Map<string, Issue[]>
+  /** Node being dragged, with the ids of its subtree (not valid drop targets). */
+  drag: { id: string; subtree: Set<string> } | null
+  /** Current drop indicator. */
+  drop: { id: string; pos: DropPos } | null
 }
 
 export interface ViewStore {
@@ -34,7 +39,9 @@ export function createViewStore(): ViewStore {
     selected: null,
     scrollTarget: null,
     helpTarget: null,
-    issuesByNode: new Map()
+    issuesByNode: new Map(),
+    drag: null,
+    drop: null
   }
   const listeners = new Set<() => void>()
   return {
